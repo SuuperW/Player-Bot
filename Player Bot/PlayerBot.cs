@@ -291,25 +291,12 @@ namespace Player_Bot
         }
         private bool IsMessageProperCommand(SocketMessage msg)
         {
-            bool msgIsCommand = false;
-            if (msg.Channel is IDMChannel)
-                msgIsCommand = true;
-            else
-            {
-                // Is format @me command
-                string[] words = msg.Content.Split(' ');
-                MentionUtils.TryParseUser(words[0], out ulong mentionedID);
-                msgIsCommand = (mentionedID == MentionUtils.ParseUser(socketClient.CurrentUser.Mention)
-                    && words.Length > 1);
-            }
-
-            return msgIsCommand;
+            // a / followed by a non-whitespace char
+            return msg.Content.Length > 1 && msg.Content.StartsWith('/') && !char.IsWhiteSpace(msg.Content[1]);
         }
         private string[] ParseCommand(string msg)
         {
-            int index = 0;
-            if (msg.IndexOf('<') == 0) // If this command was initated with a mention at the front of it.
-                index = msg.IndexOf('>') + 1;
+            int index = 1;
             List<string> list = new List<string>();
 
             do
@@ -402,13 +389,11 @@ namespace Player_Bot
 
             if (helpStrings.ContainsKey(helpTopic))
             {
-                await SendMessage(await msg.Author.GetOrCreateDMChannelAsync(), helpStrings[helpTopic]
-                  .Replace("@me", "@" + bot_name_discrim));
+                await SendMessage(msg.Channel, helpStrings[helpTopic].Replace("@me", "@" + bot_name_discrim));
             }
             else
             {
-                await SendMessage(await msg.Author.GetOrCreateDMChannelAsync(),
-                  "I could not find the help topic you gave me. To see a list of available help topics, use the command `help topics`.");
+                await SendMessage(msg.Channel, "I could not find the help topic you gave me. To see a list of available help topics, use the command `help topics`.");
                 return false;
             }
 
