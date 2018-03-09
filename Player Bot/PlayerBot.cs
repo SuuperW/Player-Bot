@@ -345,6 +345,7 @@ namespace Player_Bot
             {
                 { "help", new BotCommand(SendHelpMessage) },
                 { "commands", new BotCommand(SendCommandsList) },
+                { "view", new BotCommand(ViewUserInfo) }
             };
 
             trustedBotCommands = new SortedList<string, BotCommand>
@@ -418,6 +419,28 @@ namespace Player_Bot
             }
 
             await SendMessage(await msg.Author.GetOrCreateDMChannelAsync(), "Here are the commands you can use: ```" + availableCommands + "```");
+            return true;
+        }
+        #endregion
+
+        #region "simple info gets"
+        private async Task<bool> ViewUserInfo(SocketMessage msg, params string[] args)
+        {
+            if (args.Length < 2)
+            {
+                await SendMessage(msg.Channel, "Who are you trying to look at, " + msg.Author.Username + "?");
+                return false;
+            }
+
+            if (!PR2_Utilities.IsUsernameValid(args[1]))
+            {
+                await SendMessage(msg.Channel, "The username `" + args[1].Replace("`", "\\`") + "` is invalid.");
+                return false;
+            }
+
+            JObject viewData = await PR2_Utilities.ViewPlayer(args[1]);
+            await SendMessage(msg.Channel, "Info for " + args[1] + ":```\nRank: " + viewData["rank"] + "\nHats: " + viewData["hats"] + "```");
+
             return true;
         }
         #endregion
