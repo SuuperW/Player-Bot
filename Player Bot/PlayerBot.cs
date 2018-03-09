@@ -345,7 +345,8 @@ namespace Player_Bot
             {
                 { "help", new BotCommand(SendHelpMessage) },
                 { "commands", new BotCommand(SendCommandsList) },
-                { "view", new BotCommand(ViewUserInfo) }
+                { "view", new BotCommand(ViewUserInfo) },
+                { "hint", new BotCommand(GetArtifactHint) }
             };
 
             trustedBotCommands = new SortedList<string, BotCommand>
@@ -441,6 +442,14 @@ namespace Player_Bot
             JObject viewData = await PR2_Utilities.ViewPlayer(args[1]);
             await SendMessage(msg.Channel, "Info for " + args[1] + ":```\nRank: " + viewData["rank"] + "\nHats: " + viewData["hats"] + "```");
 
+            return true;
+        }
+        private async Task<bool> GetArtifactHint(SocketMessage msg, params string[] args)
+        {
+            JObject hint = await PR2_Utilities.GetArtifactHint();
+            string message = "Fred remembers this much: " + hint["hint"] + "\nThe first person to find this artifact was " + hint["finder_name"];
+
+            await SendMessage(msg.Channel, message);
             return true;
         }
         #endregion

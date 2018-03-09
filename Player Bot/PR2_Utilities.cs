@@ -40,5 +40,12 @@ namespace Player_Bot
 
             return JObject.Parse(await response.Content.ReadAsStringAsync());
         }
+
+        public async static Task<JObject> GetArtifactHint()
+        {
+            HttpResponseMessage response = await httpClient.GetAsync("http://pr2hub.com/files/artifact_hint.txt");
+
+            return JObject.Parse(await response.Content.ReadAsStringAsync());
+        }
     }
 }
