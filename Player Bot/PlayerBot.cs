@@ -78,7 +78,7 @@ namespace Player_Bot
 
             socketClient.MessageReceived += SocketClient_MessageReceived;
 
-            await socketClient.SetGameAsync("with RNG");
+            await socketClient.SetGameAsync("PR2");
         }
 
         public async Task Disconnect()
