@@ -46,7 +46,7 @@ namespace Player_Bot
             this.loggingLevel = loggingLevel;
 
             if (!File.Exists(secretsPath))
-                throw new FileNotFoundException("GenBot could not find secrets.txt. Please see README for info on how to set this up.");
+                throw new FileNotFoundException("PlayerBot could not find secrets.txt. Please see README for info on how to set this up.");
             secrets = JObject.Parse(File.ReadAllText("files/secrets.txt"));
             bot_token = secrets["bot_token"].ToString();
 

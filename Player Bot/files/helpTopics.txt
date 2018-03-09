@@ -1,0 +1,7 @@
+{
+	"_default": "This bot allow you to get info from pr2hub.com. E.g., `/view Jiggmin`",
+
+	"_hello": "For details on how to use this bot, say `help`.",
+	
+	"_invalid_command": "Command not recognized. For a list of available commands, use the command `commands`.",
+}
