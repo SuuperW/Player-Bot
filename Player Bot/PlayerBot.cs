@@ -17,6 +17,7 @@ namespace Player_Bot
     {
         const string outputPath = "files/output.xml";
         const string errorPath = "files/error.txt";
+        const string rolesPath = "files/roles.txt";
 
         JObject secrets;
         string bot_token;
@@ -39,6 +40,7 @@ namespace Player_Bot
         public bool IsConnected { get => socketClient.ConnectionState >= ConnectionState.Connected; }
 
         SpecialUsersCollection specialUsers;
+        RolesCollection roles;
         CommandHistory commandHistory = new CommandHistory();
 
         public PlayerBot(int loggingLevel = 2)
@@ -47,7 +49,7 @@ namespace Player_Bot
 
             if (!File.Exists(secretsPath))
                 throw new FileNotFoundException("PlayerBot could not find secrets.txt. Please see README for info on how to set this up.");
-            secrets = JObject.Parse(File.ReadAllText("files/secrets.txt"));
+            secrets = JObject.Parse(File.ReadAllText(secretsPath));
             bot_token = secrets["bot_token"].ToString();
 
             specialUsers = new SpecialUsersCollection("files/specialUsers.txt");
@@ -56,6 +58,8 @@ namespace Player_Bot
             JObject helpJson = JObject.Parse(File.ReadAllText("files/helpTopics.txt"));
             foreach (KeyValuePair<string, JToken> item in helpJson)
                 helpStrings[item.Key] = item.Value.ToString();
+
+            roles = new RolesCollection(JObject.Parse(File.ReadAllText(rolesPath)));
 
             InitializeBotCommandsList();
             CreateHelpTopicsList();
@@ -246,6 +250,10 @@ namespace Player_Bot
                           "but was unable to. Please ensure that you can receive DMs from me.");
                     }
                 }
+                else if (ex.Message == "The server responded with error 403: Forbidden")
+                {
+                    await SendMessage(msg.Channel, msg.Author.Username + ", it seems I don't have the necessary permissions to do that.");
+                }
             }
             catch (Exception ex)
             {
@@ -346,11 +354,13 @@ namespace Player_Bot
                 { "help", new BotCommand(SendHelpMessage) },
                 { "commands", new BotCommand(SendCommandsList) },
                 { "view", new BotCommand(ViewUserInfo) },
-                { "hint", new BotCommand(GetArtifactHint) }
-            };
+                { "hint", new BotCommand(GetArtifactHint) },
+                { "role", new BotCommand(ToggleRole) }
+           };
 
             trustedBotCommands = new SortedList<string, BotCommand>
             {
+                { "toggle_public_role", new BotCommand(TogglePublicRole) },
             };
 
             ownerBotCommands = new SortedList<string, BotCommand>
@@ -465,6 +475,78 @@ namespace Player_Bot
             string message = "Fred remembers this much: " + hint["hint"] + "\nThe first person to find this artifact was " + hint["finder_name"];
 
             await SendMessage(msg.Channel, message);
+            return true;
+        }
+        #endregion
+
+        #region "roles"
+        private async Task<SocketRole> GetRoleFromArgs(SocketMessage msg, params string[] args)
+        {
+            if (!(msg.Channel is SocketGuildChannel))
+            {
+                await SendMessage(msg.Channel, msg.Author.Username + ", you are not in a guild; roles don't exist here.");
+                return null;
+            }
+            if (args.Length < 2)
+            {
+                await SendMessage(msg.Channel, msg.Author.Username + ", you must specify a role name to use this command.");
+                return null;
+            }
+
+            SocketGuild guild = (msg.Channel as SocketGuildChannel).Guild;
+            SocketRole role = guild.Roles.FirstOrDefault((r) => r.Name == args[1]);
+            if (role == null)
+            {
+                await SendMessage(msg.Channel, "The role `" + args[1] + "` does not exist.");
+            }
+
+            return role;
+
+        }
+        private async Task<bool> TogglePublicRole(SocketMessage msg, params string[] args)
+        {
+            SocketRole roleToAdd = await GetRoleFromArgs(msg, args);
+            if (roleToAdd == null)
+                return false;
+
+            if (roles.publicRoles.Contains(roleToAdd.Id))
+            {
+                roles.publicRoles.Remove(roleToAdd.Id);
+                await SendMessage(msg.Channel, "The role `" + roleToAdd.Name + "` is no longer public.");
+            }
+            else
+            {
+                roles.publicRoles.Add(roleToAdd.Id);
+                await SendMessage(msg.Channel, "The role `" + roleToAdd.Name + "` has been made public.");
+            }
+            roles.Save(rolesPath);
+
+            return true;
+        }
+        private async Task<bool> ToggleRole(SocketMessage msg, params string[] args)
+        {
+            SocketRole role = await GetRoleFromArgs(msg, args);
+            if (role == null)
+                return false;
+
+            if (!roles.publicRoles.Contains(role.Id))
+            {
+                await SendMessage(msg.Channel, msg.Author.Username + ", the role `" + role.Name + "` is not available to you.");
+                return false;
+            }
+
+            SocketGuildUser user = msg.Author as SocketGuildUser; // should be safe; GetRoleFromArgs verifies that this is a guild
+            if (user.Roles.Contains(role))
+            {
+                await user.RemoveRoleAsync(role);
+                await SendMessage(msg.Channel, msg.Author.Username + ", you have been removed from the `" + role.Name + "` role.");
+            }
+            else
+            {
+                await user.AddRoleAsync(role);
+                await SendMessage(msg.Channel, msg.Author.Username + ", you have been given the `" + role.Name + "` role.");
+            }
+
             return true;
         }
         #endregion
