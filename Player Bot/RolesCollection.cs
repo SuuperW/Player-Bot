@@ -38,7 +38,7 @@ namespace Player_Bot
             obj["public"] = JArray.FromObject(publicRoles);
             obj["pr2_guilds"] = JArray.FromObject(pr2GuildRoles);
 
-            System.IO.File.WriteAllText(path, obj.ToString());
+            File.WriteAllText(path, obj.ToString());
         }
     }
 }

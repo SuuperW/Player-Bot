@@ -20,6 +20,7 @@ namespace Player_Bot
         const string outputPath = "files/output.xml";
         const string errorPath = "files/error.txt";
         const string rolesPath = "files/roles.txt";
+        const string verifiedPath = "files/verifiedUsers.txt";
 
         JObject secrets;
         string bot_token;
@@ -42,6 +43,7 @@ namespace Player_Bot
 
         SpecialUsersCollection specialUsers;
         RolesCollection roles;
+        VerifiedUsers verifiedUsers;
         CommandHistory commandHistory = new CommandHistory();
 
         public PlayerBot(int loggingLevel = 2)
@@ -58,6 +60,7 @@ namespace Player_Bot
 
             specialUsers = new SpecialUsersCollection("files/specialUsers.txt");
             roles = new RolesCollection(rolesPath);
+            verifiedUsers = new VerifiedUsers(verifiedPath);
 
             helpStrings = new SortedDictionary<string, string>();
             JObject helpJson = JObject.Parse(File.ReadAllText(helpPath));
@@ -369,6 +372,7 @@ namespace Player_Bot
             trustedBotCommands = new SortedList<string, BotCommand>
             {
                 { "toggle_public_role", new BotCommand(TogglePublicRole) },
+                { "verify_member", new BotCommand(VerifyMember) }
             };
 
             ownerBotCommands = new SortedList<string, BotCommand>
@@ -445,12 +449,12 @@ namespace Player_Bot
         #region "simple info gets"
         private async Task<bool> ViewUserInfo(SocketMessage msg, params string[] args)
         {
-            args[1] = CombineLastArgs(args, 1);
             if (args.Length < 2)
             {
                 await SendMessage(msg.Channel, "Who are you trying to look at, " + msg.Author.Username + "?");
                 return false;
             }
+            args[1] = CombineLastArgs(args, 1);
 
             if (!PR2_Utilities.IsUsernameValid(args[1]))
             {
@@ -556,6 +560,35 @@ namespace Player_Bot
                 await SendMessage(msg.Channel, msg.Author.Username + ", you have been given the `" + role.Name + "` role.");
             }
 
+            return true;
+        }
+        #endregion
+
+        #region "verification"
+        private async Task<bool> VerifyMember(SocketMessage msg, params string[] args)
+        {
+            if (args.Length < 3)
+            {
+                await SendMessage(msg.Channel, msg.Author.Username + ", the format for this cmmand is `/view @discordUser pr2_username`.");
+                return false;
+            }
+            args[2] = CombineLastArgs(args, 2);
+
+            if (!PR2_Utilities.IsUsernameValid(args[2]))
+            {
+                await SendMessage(msg.Channel, "The username `" + args[2].Replace("`", "\\`") + "` is invalid.");
+                return false;
+            }
+
+            SocketUser user = msg.MentionedUsers.FirstOrDefault();
+            if (user == null)
+            {
+                await SendMessage(msg.Channel, msg.Author.Username + ", you must mention the Discord member you are verifying.");
+                return false;
+            }
+
+            verifiedUsers.VerifyMember(user.Id, args[2]);
+            await SendMessage(msg.Channel, "Discord user " + user.Username + "#" + user.Discriminator + " verified as PR2 user " + args[2] + ".");
             return true;
         }
         #endregion
