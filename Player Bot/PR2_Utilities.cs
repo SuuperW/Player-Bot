@@ -14,6 +14,8 @@ namespace Player_Bot
     {
         private static HttpClient httpClient = new HttpClient();
 
+        public static string[] groups = new string[] { "Guest", "Member", "Moderator", "Admin" };
+
         private static char[] validUsernameChars = new char[] { ' ', '!', '-', '.', ':', ';', '=', '?', '~' };
         public static bool IsUsernameValid(string username)
         {

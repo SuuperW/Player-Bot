@@ -440,7 +440,22 @@ namespace Player_Bot
             }
 
             JObject viewData = await PR2_Utilities.ViewPlayer(args[1]);
-            await SendMessage(msg.Channel, "Info for " + args[1] + ":```\nRank: " + viewData["rank"] + "\nHats: " + viewData["hats"] + "```");
+            if (viewData.ContainsKey("error"))
+            {
+                await SendMessage(msg.Channel, "pr2hub returned an error when attempting to get player info for `" + args[1] + "`: `" + viewData["error"] + "`");
+            }
+            else
+            {
+                int group = (int)viewData["group"];
+                string groupStr = (group >= 0 && group < PR2_Utilities.groups.Length) ? PR2_Utilities.groups[group] : group.ToString();
+                string guildStr = (string)viewData["guildName"] == "" ? "" : "\nGuild: " + viewData["guildName"];
+                string registerStr = ((DateTime)viewData["registerDate"]).Year < 1990 ? "Age of Heros" : (string)viewData["registerDate"];
+                string lastLoginStr = (string)viewData["status"] == "offline" ? "Last login: " + viewData["loginDate"] : (string)viewData["status"];
+
+                await SendMessage(msg.Channel, "Info for " + args[1] + " (id: " + viewData["userId"] + "):```\nGroup: "
+                    + groupStr + "\nRank: " + viewData["rank"] + "\nHats: " + viewData["hats"] + guildStr
+                    + "\nRegister Date: " + registerStr + "\n\n" + lastLoginStr + "```");
+            }
 
             return true;
         }
