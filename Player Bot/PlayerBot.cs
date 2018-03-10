@@ -459,7 +459,7 @@ namespace Player_Bot
                 int group = (int)viewData["group"];
                 string groupStr = (group >= 0 && group < PR2_Utilities.groups.Length) ? PR2_Utilities.groups[group] : group.ToString();
                 string guildStr = (string)viewData["guildName"] == "" ? "" : "\nGuild: " + viewData["guildName"];
-                string registerStr = ((DateTime)viewData["registerDate"]).Year < 1990 ? "Age of Heros" : (string)viewData["registerDate"];
+                string registerStr = ((DateTime)viewData["registerDate"]).Year < 1990 ? "Age of Heroes" : (string)viewData["registerDate"];
                 string lastLoginStr = (string)viewData["status"] == "offline" ? "Last login: " + viewData["loginDate"] : (string)viewData["status"];
 
                 await SendMessage(msg.Channel, "Info for " + args[1] + " (id: " + viewData["userId"] + "):```\nGroup: "
