@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 
 using Newtonsoft.Json.Linq;
 
@@ -10,8 +11,19 @@ namespace Player_Bot
         public SortedSet<ulong> publicRoles;
         public SortedSet<ulong> pr2GuildRoles;
 
-        public RolesCollection(JObject obj)
+        public RolesCollection(string path)
         {
+            JObject obj;
+            if (File.Exists(path))
+                obj = JObject.Parse(File.ReadAllText(path));
+            else
+                obj = new JObject();
+
+            if (!obj.ContainsKey("public"))
+                obj["public"] = new JArray();
+            if (!obj.ContainsKey("pr2_guilds"))
+                obj["pr2_guilds"] = new JArray();
+
             publicRoles = new SortedSet<ulong>();
             foreach (JToken token in (JArray)obj["public"])
                 publicRoles.Add((ulong)token);

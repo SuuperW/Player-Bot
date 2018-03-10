@@ -15,6 +15,8 @@ namespace Player_Bot
 {
     class PlayerBot
     {
+        const string secretsPath = "files/secrets.txt";
+        const string helpPath = "files/helpTopics.txt";
         const string outputPath = "files/output.xml";
         const string errorPath = "files/error.txt";
         const string rolesPath = "files/roles.txt";
@@ -22,7 +24,6 @@ namespace Player_Bot
         JObject secrets;
         string bot_token;
         string bot_name_discrim;
-        const string secretsPath = "files/secrets.txt";
 
         int loggingLevel;
         IMessageChannel loggingChannel = null;
@@ -49,17 +50,20 @@ namespace Player_Bot
 
             if (!File.Exists(secretsPath))
                 throw new FileNotFoundException("PlayerBot could not find secrets.txt. Please see README for info on how to set this up.");
+            if (!File.Exists(helpPath))
+                throw new FileNotFoundException("PlayerBot count not find helpTopics.txt. Please don't run a bot without a working help command.");
+
             secrets = JObject.Parse(File.ReadAllText(secretsPath));
             bot_token = secrets["bot_token"].ToString();
 
             specialUsers = new SpecialUsersCollection("files/specialUsers.txt");
+            roles = new RolesCollection(rolesPath);
 
             helpStrings = new SortedDictionary<string, string>();
-            JObject helpJson = JObject.Parse(File.ReadAllText("files/helpTopics.txt"));
+            JObject helpJson = JObject.Parse(File.ReadAllText(helpPath));
             foreach (KeyValuePair<string, JToken> item in helpJson)
                 helpStrings[item.Key] = item.Value.ToString();
 
-            roles = new RolesCollection(JObject.Parse(File.ReadAllText(rolesPath)));
 
             InitializeBotCommandsList();
             CreateHelpTopicsList();
