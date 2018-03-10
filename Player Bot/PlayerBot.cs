@@ -340,6 +340,10 @@ namespace Player_Bot
 
             return list.ToArray();
         }
+        private string CombineLastArgs(string[] args, int lastIndex)
+        {
+            return String.Join(' ', args, lastIndex, args.Length - lastIndex);
+        }
 
         #region "Bot Commands"
         private SortedList<string, BotCommand> everybodyBotCommands;
@@ -437,6 +441,7 @@ namespace Player_Bot
         #region "simple info gets"
         private async Task<bool> ViewUserInfo(SocketMessage msg, params string[] args)
         {
+            args[1] = CombineLastArgs(args, 1);
             if (args.Length < 2)
             {
                 await SendMessage(msg.Channel, "Who are you trying to look at, " + msg.Author.Username + "?");
