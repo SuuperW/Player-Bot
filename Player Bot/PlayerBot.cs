@@ -361,8 +361,9 @@ namespace Player_Bot
 
         private string GetUsername(SocketUser user)
         {
-            if (user is SocketGuildUser)
-                return (user as SocketGuildUser).Nickname;
+            SocketGuildUser guildUser = user as SocketGuildUser;
+            if (guildUser != null && guildUser.Nickname != "")
+                return guildUser.Nickname;
             else
                 return user.Username;
         }
