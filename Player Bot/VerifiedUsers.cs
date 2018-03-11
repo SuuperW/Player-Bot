@@ -28,8 +28,11 @@ namespace Player_Bot
             foreach (JObject discordUser in (JArray)obj["discord_users"])
             {
                 SortedSet<string> pr2Names = new SortedSet<string>();
-                foreach (JToken pr2User in (JArray)discordUser["pr2_accounts"])
-                    pr2Names.Add((string)pr2User);
+                if (discordUser.ContainsKey("pr2_accounts"))
+                {
+                    foreach (JToken pr2User in (JArray)discordUser["pr2_accounts"])
+                        pr2Names.Add((string)pr2User);
+                }
 
                 members.Add((ulong)discordUser["id"], pr2Names);
                 if (discordUser.ContainsKey("verification_code"))
