@@ -1,7 +1,7 @@
 {
-	"_default": "This bot allow you to get info from pr2hub.com. E.g., `/view Jiggmin`",
+	"_default": "This bot can get info from PR2, as well as do some other things. E.g., `/view Jiggmin`\nTo see all of the availalbe bot commands, say `/commands`.",
 
-	"_hello": "For details on how to use this bot, say `help`.",
+	"_hello": "For details on how to use this bot, say `/help`.",
 	
-	"_invalid_command": "Command not recognized. For a list of available commands, use the command `commands`.",
+	"_invalid_command": "Command not recognized. For a list of available commands, use the command `/commands`.",
 }
