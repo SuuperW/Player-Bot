@@ -616,7 +616,7 @@ namespace Player_Bot
 
             if (args.Length < 3)
             {
-                await SendMessage(msg.Channel, msg.Author.Username + ", the format for this cmmand is `/verify @discordUser pr2_username`.");
+                await SendMessage(msg.Channel, msg.Author.Username + ", the format for this cmmand is `/unverify @discordUser pr2_username`.");
                 return false;
             }
             args[2] = CombineLastArgs(args, 2);
@@ -639,7 +639,7 @@ namespace Player_Bot
                 Random r = new Random(Environment.TickCount);
                 int verificationCode = r.Next(100000000, int.MaxValue);
                 await SendMessage(await msg.Author.GetOrCreateDMChannelAsync(), "To verify your PR2 account, send a PM to `Player Bot` saying `"
-                    + verificationCode + "` and nothing else. Then use the command `/verify username` whenre 'username' is replaced with your PR2 username.");
+                    + verificationCode + "` and nothing else. Then use the command `/verify username` where 'username' is replaced with your PR2 username.");
                 await SendMessage(msg.Channel, msg.Author.Username + ", please check your DMs.");
 
                 if (verifiedUsers.pendingVerification.ContainsKey(msg.Author.Id))
