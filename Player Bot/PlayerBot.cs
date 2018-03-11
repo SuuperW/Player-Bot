@@ -63,7 +63,8 @@ namespace Player_Bot
             bot_token = secrets["bot_token"].ToString();
             pr2_username = (string)secrets["pr2_username"];
             pr2_password = (string)secrets["pr2_password"];
-            pr2_token = (string)secrets["pr2_token"];
+            if (secrets.ContainsKey("pr2_token"))
+                pr2_token = (string)secrets["pr2_token"];
 
             specialUsers = new SpecialUsersCollection("files/specialUsers.txt");
             roles = new RolesCollection(rolesPath);
@@ -755,6 +756,12 @@ namespace Player_Bot
                 args[1] = CombineLastArgs(args, 1);
 
                 JObject messages = await PR2_Utilities.GetPrivateMessages(pr2_token);
+                if (PR2_Utilities.IsResponseNotLoggedInError(messages))
+                {
+                    pr2_token = await PR2_Utilities.ObtainLoginToken(pr2_username, pr2_password);
+                    messages = await PR2_Utilities.GetPrivateMessages(pr2_token);
+                }
+                    
                 if (messages.ContainsKey("error") || (bool)messages["success"] == false)
                 {
                     await SendMessage(msg.Channel, "Error: count not retreive PMs.");
