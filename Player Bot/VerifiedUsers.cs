@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-//using System.Linq;
+using System.Linq;
 
 using Newtonsoft.Json.Linq;
 
@@ -24,6 +24,7 @@ namespace Player_Bot
                 obj["discord_users"] = new JArray();
 
             members = new SortedList<ulong, SortedSet<string>>();
+            pendingVerification = new SortedList<ulong, int>();
             foreach (JObject discordUser in (JArray)obj["discord_users"])
             {
                 SortedSet<string> pr2Names = new SortedSet<string>();
@@ -48,7 +49,7 @@ namespace Player_Bot
         public void UnverifyMember(ulong discordID, string pr2Name)
         {
             if (members.ContainsKey(discordID))
-                members[discordID].Remove(pr2Name);
+                members[discordID].RemoveWhere((n) => n.ToLower() == pr2Name.ToLower());
         }
 
         public void Save(string path)
@@ -60,9 +61,19 @@ namespace Player_Bot
                 JObject jMember = new JObject();
                 jMember["id"] = members.Keys[i];
                 jMember["pr2_accounts"] = JArray.FromObject(members.Values[i]);
-                if (pendingVerification.ContainsKey(members.Keys[i]))
-                    jMember["verification_code"] = pendingVerification[members.Keys[i]];
                 array.Add(jMember);
+            }
+            for (int i = 0; i < pendingVerification.Count; i++)
+            {
+                if (members.ContainsKey(pendingVerification.Keys[i]))
+                    array.First((t) => (ulong)t["id"] == pendingVerification.Keys[i])["verification_code"] = pendingVerification.Values[i];
+                else
+                {
+                    JObject jMember = new JObject();
+                    jMember["id"] = pendingVerification.Keys[i];
+                    jMember["verification_code"] = pendingVerification.Values[i];
+                    array.Add(jMember);
+                }
             }
             obj["discord_users"] = array;
 

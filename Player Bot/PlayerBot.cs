@@ -597,6 +597,7 @@ namespace Player_Bot
             }
 
             verifiedUsers.VerifyMember(user.Id, args[2]);
+            verifiedUsers.Save(verifiedPath);
             await SendMessage(msg.Channel, "Discord user " + user.Username + "#" + user.Discriminator + " verified as PR2 user " + args[2] + ".");
             return true;
         }
@@ -617,6 +618,7 @@ namespace Player_Bot
             }
 
             verifiedUsers.UnverifyMember(user.Id, args[2]);
+            verifiedUsers.Save(verifiedPath);
             await SendMessage(msg.Channel, "Discord user " + user.Username + "#" + user.Discriminator + " un-verified as PR2 user " + args[2] + ".");
             return true;
         }
@@ -634,6 +636,7 @@ namespace Player_Bot
                     verifiedUsers.pendingVerification[msg.Author.Id] = verificationCode;
                 else
                     verifiedUsers.pendingVerification.Add(msg.Author.Id, verificationCode);
+                verifiedUsers.Save(verifiedPath);
             }
             else // finish process
             {
@@ -646,7 +649,7 @@ namespace Player_Bot
                     return false;
                 }
 
-                JToken theMessage = messages["messages"].FirstOrDefault((t) => (string)t["name"] == args[1]);
+                JToken theMessage = messages["messages"].FirstOrDefault((t) => ((string)t["name"]).ToLower() == args[1].ToLower());
                 if (theMessage == null)
                 {
                     await SendMessage(msg.Channel, msg.Author.Username + ", I do not have a PM from you. Make sure you have sent the required PM to the PR2 user `"
@@ -654,8 +657,10 @@ namespace Player_Bot
                 }
                 else if ((string)theMessage["message"] == verifiedUsers.pendingVerification[msg.Author.Id].ToString())
                 {
+                    args[1] = (string)theMessage["name"]; // get PR2's official casing
                     verifiedUsers.VerifyMember(msg.Author.Id, args[1]);
                     verifiedUsers.pendingVerification.Remove(msg.Author.Id);
+                    verifiedUsers.Save(verifiedPath);
 
                     await SendMessage(msg.Channel, msg.Author.Username + ", you have been verified as PR2 user `" + args[1] + "`.");
                 }

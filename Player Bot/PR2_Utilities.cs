@@ -53,7 +53,11 @@ namespace Player_Bot
 
         public async static Task<JObject> GetPrivateMessages(string pr2_token)
         {
-            HttpResponseMessage response = await httpClient.GetAsync(getPMUrl);
+            Dictionary<string, string> values = new Dictionary<string, string>();
+            values.Add("token", pr2_token);
+            FormUrlEncodedContent content = new FormUrlEncodedContent(values);
+            HttpResponseMessage response = await httpClient.PostAsync(getPMUrl, content);
+
             return JObject.Parse(await response.Content.ReadAsStringAsync());
         }
     }
