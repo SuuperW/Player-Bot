@@ -589,8 +589,13 @@ namespace Player_Bot
             SocketGuildUser user = msg.Author as SocketGuildUser; // should be safe; GetRoleFromArgs verifies that this is a guild
             if (user.Roles.Contains(role))
             {
-                await user.RemoveRoleAsync(role);
-                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have been removed from the `" + role.Name + "` role.");
+                if (roles.publicRoles.Contains(role.Id) || roles.pr2GuildRoles.Contains(role.Id))
+                {
+                    await user.RemoveRoleAsync(role);
+                    await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have been removed from the `" + role.Name + "` role.");
+                }
+                else
+                    await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you may not remove the `" + role.Name + "` role.");
             }
             else if (roles.publicRoles.Contains(role.Id)) // add public role
             {
