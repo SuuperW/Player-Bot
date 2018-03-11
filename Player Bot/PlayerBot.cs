@@ -560,13 +560,7 @@ namespace Player_Bot
         {
             SocketRole role = await GetRoleFromArgs(msg, args);
             if (role == null)
-                return false;
-
-            if (!roles.publicRoles.Contains(role.Id))
-            {
-                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", the role `" + role.Name + "` is not available to you.");
-                return false;
-            }
+                return true;
 
             SocketGuildUser user = msg.Author as SocketGuildUser; // should be safe; GetRoleFromArgs verifies that this is a guild
             if (user.Roles.Contains(role))
@@ -574,10 +568,51 @@ namespace Player_Bot
                 await user.RemoveRoleAsync(role);
                 await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have been removed from the `" + role.Name + "` role.");
             }
-            else
+            else if (roles.publicRoles.Contains(role.Id)) // add public role
             {
                 await user.AddRoleAsync(role);
                 await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have been given the `" + role.Name + "` role.");
+            }
+            else if (roles.pr2GuildRoles.Contains(role.Id)) // add guild role?
+            {
+                List<string> accounts = verifiedUsers.GetPR2Usernames(user.Id);
+                string pr2Name;
+                if (args.Length < 3)
+                    pr2Name = accounts.FirstOrDefault();
+                else
+                {
+                    pr2Name = CombineLastArgs(args, 2);
+                    if (!accounts.Contains(pr2Name))
+                    {
+                        await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have not verified the PR2 account `" + pr2Name + "`.");
+                        return true;
+                    }
+                }
+                if (pr2Name == null)
+                {
+                    await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have not verified any PR2 accounts.");
+                    return true;
+                }
+
+                JObject playerInfo = await PR2_Utilities.ViewPlayer(pr2Name);
+                if ((string)playerInfo["guildName"] == role.Name)
+                {
+                    await user.AddRoleAsync(role);
+                    await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have been given the `" + role.Name + "` role.");
+                }
+                else if (accounts.Count > 1)
+                {
+                    await SendMessage(msg.Channel, GetUsername(msg.Author) + ", your account `" + pr2Name + "` is not a member of the `"
+                        + role.Name + "` guild. If another of your verified accounts is, specify that account name after the guild name.");
+                }
+                else
+                    await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you are not a member of the `" + role.Name + "` guild.");
+
+            }
+            else
+            { 
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", the role `" + role.Name + "` is not available.");
+                return false;
             }
 
             return true;
