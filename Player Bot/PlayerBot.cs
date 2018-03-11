@@ -60,11 +60,6 @@ namespace Player_Bot
                 throw new FileNotFoundException("PlayerBot count not find helpTopics.txt. Please don't run a bot without a working help command.");
 
             secrets = JObject.Parse(File.ReadAllText(secretsPath));
-            bot_token = secrets["bot_token"].ToString();
-            pr2_username = (string)secrets["pr2_username"];
-            pr2_password = (string)secrets["pr2_password"];
-            if (secrets.ContainsKey("pr2_token"))
-                pr2_token = (string)secrets["pr2_token"];
 
             specialUsers = new SpecialUsersCollection("files/specialUsers.txt");
             roles = new RolesCollection(rolesPath);
@@ -210,6 +205,7 @@ namespace Player_Bot
 
         private void SaveSecrets()
         {
+            secrets["pr2_token"] = pr2_token;
             File.WriteAllText(secretsPath, secrets.ToString());
         }
 
@@ -759,6 +755,7 @@ namespace Player_Bot
                 if (PR2_Utilities.IsResponseNotLoggedInError(messages))
                 {
                     pr2_token = await PR2_Utilities.ObtainLoginToken(pr2_username, pr2_password);
+                    SaveSecrets();
                     messages = await PR2_Utilities.GetPrivateMessages(pr2_token);
                 }
                     
