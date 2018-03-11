@@ -13,6 +13,7 @@ namespace Player_Bot
     static class PR2_Utilities
     {
         private static HttpClient httpClient = new HttpClient();
+        const string getPMUrl = "https://pr2hub.com/messages_get.php?count=999";
 
         public static string[] groups = new string[] { "Guest", "Member", "Moderator", "Admin" };
 
@@ -47,6 +48,12 @@ namespace Player_Bot
         {
             HttpResponseMessage response = await httpClient.GetAsync("http://pr2hub.com/files/artifact_hint.txt");
 
+            return JObject.Parse(await response.Content.ReadAsStringAsync());
+        }
+
+        public async static Task<JObject> GetPrivateMessages(string pr2_token)
+        {
+            HttpResponseMessage response = await httpClient.GetAsync(getPMUrl);
             return JObject.Parse(await response.Content.ReadAsStringAsync());
         }
     }

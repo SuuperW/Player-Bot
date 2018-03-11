@@ -26,6 +26,10 @@ namespace Player_Bot
         string bot_token;
         string bot_name_discrim;
 
+        string pr2_username;
+        string pr2_password;
+        string pr2_token;
+
         int loggingLevel;
         IMessageChannel loggingChannel = null;
 
@@ -57,6 +61,9 @@ namespace Player_Bot
 
             secrets = JObject.Parse(File.ReadAllText(secretsPath));
             bot_token = secrets["bot_token"].ToString();
+            pr2_username = (string)secrets["pr2_username"];
+            pr2_password = (string)secrets["pr2_password"];
+            pr2_token = (string)secrets["pr2_token"];
 
             specialUsers = new SpecialUsersCollection("files/specialUsers.txt");
             roles = new RolesCollection(rolesPath);
@@ -366,7 +373,8 @@ namespace Player_Bot
                 { "commands", new BotCommand(SendCommandsList) },
                 { "view", new BotCommand(ViewUserInfo) },
                 { "hint", new BotCommand(GetArtifactHint) },
-                { "role", new BotCommand(ToggleRole) }
+                { "role", new BotCommand(ToggleRole) },
+                { "verify", new BotCommand(VerifySelf) }
            };
 
             trustedBotCommands = new SortedList<string, BotCommand>
@@ -589,6 +597,53 @@ namespace Player_Bot
 
             verifiedUsers.VerifyMember(user.Id, args[2]);
             await SendMessage(msg.Channel, "Discord user " + user.Username + "#" + user.Discriminator + " verified as PR2 user " + args[2] + ".");
+            return true;
+        }
+        private async Task<bool> VerifySelf(SocketMessage msg, params string[] args)
+        {
+            if (args.Length == 1 || !verifiedUsers.pendingVerification.ContainsKey(msg.Author.Id)) // initialize process
+            {
+                Random r = new Random(Environment.TickCount);
+                int verificationCode = r.Next(100000000, int.MaxValue);
+                await SendMessage(await msg.Author.GetOrCreateDMChannelAsync(), "To verify your PR2 account, send a PM to `Player Bot` saying `"
+                    + verificationCode + "` and nothing else. Then use the command `/verify username` whenre 'username' is replaced with your PR2 username.");
+                await SendMessage(msg.Channel, msg.Author.Username + ", please check your DMs.");
+
+                if (verifiedUsers.pendingVerification.ContainsKey(msg.Author.Id))
+                    verifiedUsers.pendingVerification[msg.Author.Id] = verificationCode;
+                else
+                    verifiedUsers.pendingVerification.Add(msg.Author.Id, verificationCode);
+            }
+            else // finish process
+            {
+                args[1] = CombineLastArgs(args, 1);
+
+                JObject messages = await PR2_Utilities.GetPrivateMessages(pr2_token);
+                if ((bool)messages["success"] == false)
+                {
+                    await SendMessage(msg.Channel, "Error: count not retreive PMs.");
+                    return false;
+                }
+
+                JToken theMessage = messages["messages"].FirstOrDefault((t) => (string)t["name"] == args[1]);
+                if (theMessage == null)
+                {
+                    await SendMessage(msg.Channel, msg.Author.Username + ", I do not have a PM from you. Make sure you have sent the required PM to the PR2 user `"
+                        + pr2_username + "`, and that the PM includes only the verification code.");
+                }
+                else if ((string)theMessage["message"] == verifiedUsers.pendingVerification[msg.Author.Id].ToString())
+                {
+                    verifiedUsers.VerifyMember(msg.Author.Id, args[1]);
+                    verifiedUsers.pendingVerification.Remove(msg.Author.Id);
+
+                    await SendMessage(msg.Channel, msg.Author.Username + ", you have been verified as PR2 user `" + args[1] + "`.");
+                }
+                else
+                {
+                    await SendMessage(msg.Channel, msg.Author.Username + ", I have a PM from you, but it's contents do not exactly match the verificatin code I gave you.");
+                }
+            }
+
             return true;
         }
         #endregion

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+//using System.Linq;
 
 using Newtonsoft.Json.Linq;
 
@@ -9,6 +10,7 @@ namespace Player_Bot
     class VerifiedUsers
     {
         SortedList<ulong, SortedSet<string>> members;
+        public SortedList<ulong, int> pendingVerification;
 
         public VerifiedUsers(string path)
         {
@@ -22,13 +24,17 @@ namespace Player_Bot
                 obj["discord_users"] = new JArray();
 
             members = new SortedList<ulong, SortedSet<string>>();
-            foreach (JToken discordUser in (JArray)obj["discord_users"])
+            foreach (JObject discordUser in (JArray)obj["discord_users"])
             {
                 SortedSet<string> pr2Names = new SortedSet<string>();
                 foreach (JToken pr2User in (JArray)discordUser["pr2_accounts"])
                     pr2Names.Add((string)pr2User);
 
                 members.Add((ulong)discordUser["id"], pr2Names);
+                if (discordUser.ContainsKey("verification_code"))
+                {
+                    pendingVerification.Add((ulong)discordUser["id"], (int)discordUser["verification_code"]);
+                }
             }
         }
 
@@ -54,6 +60,8 @@ namespace Player_Bot
                 JObject jMember = new JObject();
                 jMember["id"] = members.Keys[i];
                 jMember["pr2_accounts"] = JArray.FromObject(members.Values[i]);
+                if (pendingVerification.ContainsKey(members.Keys[i]))
+                    jMember["verification_code"] = pendingVerification[members.Keys[i]];
                 array.Add(jMember);
             }
             obj["discord_users"] = array;
