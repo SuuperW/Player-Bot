@@ -576,6 +576,12 @@ namespace Player_Bot
         #region "verification"
         private async Task<bool> VerifyMember(SocketMessage msg, params string[] args)
         {
+            if (!(msg.Channel is SocketGuildChannel))
+            {
+                await SendMessage(msg.Channel, "You must do this in the server, so that my stupid bot brain will understand how to grant the Verified Member role.");
+                return false;
+            }
+
             if (args.Length < 3)
             {
                 await SendMessage(msg.Channel, msg.Author.Username + ", the format for this cmmand is `/verify @discordUser pr2_username`.");
@@ -596,13 +602,18 @@ namespace Player_Bot
                 return false;
             }
 
-            verifiedUsers.VerifyMember(user.Id, args[2]);
-            verifiedUsers.Save(verifiedPath);
+            await VerifyMember(user as SocketGuildUser, args[2], (msg.Channel as SocketGuildChannel).Guild);
             await SendMessage(msg.Channel, "Discord user " + user.Username + "#" + user.Discriminator + " verified as PR2 user " + args[2] + ".");
             return true;
         }
         private async Task<bool> UnverifyMember(SocketMessage msg, params string[] args)
         {
+            if (!(msg.Channel is SocketGuildChannel))
+            {
+                await SendMessage(msg.Channel, "You must do this in the server, so that my stupid bot brain will understand how to remove the Verified Member role.");
+                return false;
+            }
+
             if (args.Length < 3)
             {
                 await SendMessage(msg.Channel, msg.Author.Username + ", the format for this cmmand is `/verify @discordUser pr2_username`.");
@@ -617,8 +628,7 @@ namespace Player_Bot
                 return false;
             }
 
-            verifiedUsers.UnverifyMember(user.Id, args[2]);
-            verifiedUsers.Save(verifiedPath);
+            await UnverifyMember(user as SocketGuildUser, args[2], (msg.Channel as SocketGuildChannel).Guild);
             await SendMessage(msg.Channel, "Discord user " + user.Username + "#" + user.Discriminator + " un-verified as PR2 user " + args[2] + ".");
             return true;
         }
@@ -640,10 +650,16 @@ namespace Player_Bot
             }
             else // finish process
             {
+                if (!(msg.Channel is SocketGuildChannel))
+                {
+                    await SendMessage(msg.Channel, "You must do this in the server, so that my stupid bot brain will understand how to grant the Verified Member role.");
+                    return false;
+                }
+
                 args[1] = CombineLastArgs(args, 1);
 
                 JObject messages = await PR2_Utilities.GetPrivateMessages(pr2_token);
-                if ((bool)messages["success"] == false)
+                if (messages.ContainsKey("error") || (bool)messages["success"] == false)
                 {
                     await SendMessage(msg.Channel, "Error: count not retreive PMs.");
                     return false;
@@ -658,11 +674,10 @@ namespace Player_Bot
                 else if ((string)theMessage["message"] == verifiedUsers.pendingVerification[msg.Author.Id].ToString())
                 {
                     args[1] = (string)theMessage["name"]; // get PR2's official casing
-                    verifiedUsers.VerifyMember(msg.Author.Id, args[1]);
-                    verifiedUsers.pendingVerification.Remove(msg.Author.Id);
-                    verifiedUsers.Save(verifiedPath);
+                    await VerifyMember(msg.Author as SocketGuildUser, args[1], (msg.Channel as SocketGuildChannel).Guild);
 
                     await SendMessage(msg.Channel, msg.Author.Username + ", you have been verified as PR2 user `" + args[1] + "`.");
+
                 }
                 else
                 {
@@ -671,6 +686,42 @@ namespace Player_Bot
             }
 
             return true;
+        }
+        private async Task VerifyMember(SocketGuildUser user, string pr2Name, SocketGuild guild)
+        {
+            verifiedUsers.VerifyMember(user.Id, pr2Name);
+            verifiedUsers.pendingVerification.Remove(user.Id);
+            verifiedUsers.Save(verifiedPath);
+
+            // server role
+            SocketRole role = guild.Roles.FirstOrDefault((r) => r.Name == "Verified Member");
+            if (role != null)
+                await user.AddRoleAsync(role);
+
+            // logging
+            IMessageChannel channel = guild.Channels.FirstOrDefault((c) => c.Name == "verified-members" && c is IMessageChannel) as IMessageChannel;
+            if (channel != null)
+                await SendMessage(channel, user.Mention + " - " + pr2Name);
+        }
+        private async Task UnverifyMember(SocketGuildUser user, string pr2Name, SocketGuild guild)
+        {
+            verifiedUsers.UnverifyMember(user.Id, pr2Name);
+            verifiedUsers.Save(verifiedPath);
+
+            // server role
+            SocketRole role = guild.Roles.FirstOrDefault((r) => r.Name == "Verified Member");
+            if (role != null)
+                await user.RemoveRoleAsync(role);
+
+            // logging
+            IMessageChannel channel = guild.Channels.FirstOrDefault((c) => c.Name == "verified-members" && c is IMessageChannel) as IMessageChannel;
+            if (channel != null)
+            {
+                IList<IMessage> messages = (await channel.GetMessagesAsync(999).Flatten()).ToList();
+                IMessage theMesage = messages.FirstOrDefault((m) => m.Content.ToLower() == user.Mention + " - " + pr2Name.ToLower());
+                if (theMesage != null)
+                    await theMesage.DeleteAsync();
+            }
         }
         #endregion
 
