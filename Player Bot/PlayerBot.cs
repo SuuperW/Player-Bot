@@ -390,6 +390,7 @@ namespace Player_Bot
             trustedBotCommands = new SortedList<string, BotCommand>
             {
                 { "toggle_public_role", new BotCommand(TogglePublicRole, -1) },
+                { "toggle_guild_role", new BotCommand(ToggleGuildRole, -1) },
                 { "verify_member", new BotCommand(VerifyMember, -1) },
                 { "unverify_member", new BotCommand(UnverifyMember, -1) }
             };
@@ -578,6 +579,27 @@ namespace Player_Bot
                 await user.AddRoleAsync(role);
                 await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have been given the `" + role.Name + "` role.");
             }
+
+            return true;
+        }
+
+        private async Task<bool> ToggleGuildRole(SocketMessage msg, params string[] args)
+        {
+            SocketRole roleToAdd = await GetRoleFromArgs(msg, args);
+            if (roleToAdd == null)
+                return false;
+
+            if (roles.pr2GuildRoles.Contains(roleToAdd.Id))
+            {
+                roles.pr2GuildRoles.Remove(roleToAdd.Id);
+                await SendMessage(msg.Channel, "The role `" + roleToAdd.Name + "` is no longer a guild role.");
+            }
+            else
+            {
+                roles.pr2GuildRoles.Add(roleToAdd.Id);
+                await SendMessage(msg.Channel, "The role `" + roleToAdd.Name + "` has been made a guild role.");
+            }
+            roles.Save(rolesPath);
 
             return true;
         }
