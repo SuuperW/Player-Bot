@@ -247,7 +247,7 @@ namespace Player_Bot
                     {
                         string waitMessage = commandHistory.GetWaitMessage(command, msg.Author.Id);
                         if (waitMessage != null)
-                            command = new BotCommand(async (m, a) => { await SendMessage(msg.Channel, msg.Author.Username + waitMessage); return true; });
+                            command = new BotCommand(async (m, a) => { await SendMessage(msg.Channel, GetUsername(msg.Author) + waitMessage); return true; });
                     }
 
                     if (await command.Delegate(msg, args))
@@ -260,13 +260,13 @@ namespace Player_Bot
                 {
                     if (!msg.Author.IsBot)
                     {
-                        await SendMessage(msg.Channel, msg.Author.Username + ", I attempted to send you a DM " +
+                        await SendMessage(msg.Channel, GetUsername(msg.Author) + ", I attempted to send you a DM " +
                           "but was unable to. Please ensure that you can receive DMs from me.");
                     }
                 }
                 else if (ex.Message == "The server responded with error 403: Forbidden")
                 {
-                    await SendMessage(msg.Channel, msg.Author.Username + ", it seems I don't have the necessary permissions to do that.");
+                    await SendMessage(msg.Channel, GetUsername(msg.Author) + ", it seems I don't have the necessary permissions to do that.");
                 }
             }
             catch (Exception ex)
@@ -274,7 +274,7 @@ namespace Player_Bot
                 await LogError(ex);
 
                 await SendFile(await socketClient.GetUser(specialUsers.Owner).GetOrCreateDMChannelAsync(), errorPath, "I've encountered an error.");
-                await SendMessage(msg.Channel, msg.Author.Username +
+                await SendMessage(msg.Channel, GetUsername(msg.Author) +
                     ", I have encountered an error and don't know what to do with it. :(\n" +
                     "Error details have been sent to my owner.");
             }
@@ -357,6 +357,14 @@ namespace Player_Bot
         private string CombineLastArgs(string[] args, int lastIndex)
         {
             return String.Join(' ', args, lastIndex, args.Length - lastIndex);
+        }
+
+        private string GetUsername(SocketUser user)
+        {
+            if (user is SocketGuildUser)
+                return (user as SocketGuildUser).Nickname;
+            else
+                return user.Username;
         }
 
         #region "Bot Commands"
@@ -460,7 +468,7 @@ namespace Player_Bot
         {
             if (args.Length < 2)
             {
-                await SendMessage(msg.Channel, "Who are you trying to look at, " + msg.Author.Username + "?");
+                await SendMessage(msg.Channel, "Who are you trying to look at, " + GetUsername(msg.Author) + "?");
                 return false;
             }
             args[1] = CombineLastArgs(args, 1);
@@ -506,12 +514,12 @@ namespace Player_Bot
         {
             if (!(msg.Channel is SocketGuildChannel))
             {
-                await SendMessage(msg.Channel, msg.Author.Username + ", you are not in a guild; roles don't exist here.");
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you are not in a guild; roles don't exist here.");
                 return null;
             }
             if (args.Length < 2)
             {
-                await SendMessage(msg.Channel, msg.Author.Username + ", you must specify a role name to use this command.");
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you must specify a role name to use this command.");
                 return null;
             }
 
@@ -553,7 +561,7 @@ namespace Player_Bot
 
             if (!roles.publicRoles.Contains(role.Id))
             {
-                await SendMessage(msg.Channel, msg.Author.Username + ", the role `" + role.Name + "` is not available to you.");
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", the role `" + role.Name + "` is not available to you.");
                 return false;
             }
 
@@ -561,12 +569,12 @@ namespace Player_Bot
             if (user.Roles.Contains(role))
             {
                 await user.RemoveRoleAsync(role);
-                await SendMessage(msg.Channel, msg.Author.Username + ", you have been removed from the `" + role.Name + "` role.");
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have been removed from the `" + role.Name + "` role.");
             }
             else
             {
                 await user.AddRoleAsync(role);
-                await SendMessage(msg.Channel, msg.Author.Username + ", you have been given the `" + role.Name + "` role.");
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have been given the `" + role.Name + "` role.");
             }
 
             return true;
@@ -584,7 +592,7 @@ namespace Player_Bot
 
             if (args.Length < 3)
             {
-                await SendMessage(msg.Channel, msg.Author.Username + ", the format for this cmmand is `/verify @discordUser pr2_username`.");
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", the format for this cmmand is `/verify @discordUser pr2_username`.");
                 return false;
             }
             args[2] = CombineLastArgs(args, 2);
@@ -598,7 +606,7 @@ namespace Player_Bot
             SocketUser user = msg.MentionedUsers.FirstOrDefault();
             if (user == null)
             {
-                await SendMessage(msg.Channel, msg.Author.Username + ", you must mention the Discord member you are verifying.");
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you must mention the Discord member you are verifying.");
                 return false;
             }
 
@@ -616,7 +624,7 @@ namespace Player_Bot
 
             if (args.Length < 3)
             {
-                await SendMessage(msg.Channel, msg.Author.Username + ", the format for this cmmand is `/unverify @discordUser pr2_username`.");
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", the format for this cmmand is `/unverify @discordUser pr2_username`.");
                 return false;
             }
             args[2] = CombineLastArgs(args, 2);
@@ -624,7 +632,7 @@ namespace Player_Bot
             SocketUser user = msg.MentionedUsers.FirstOrDefault();
             if (user == null)
             {
-                await SendMessage(msg.Channel, msg.Author.Username + ", you must mention the Discord member you are un-verifying.");
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you must mention the Discord member you are un-verifying.");
                 return false;
             }
 
@@ -640,7 +648,7 @@ namespace Player_Bot
                 int verificationCode = r.Next(100000000, int.MaxValue);
                 await SendMessage(await msg.Author.GetOrCreateDMChannelAsync(), "To verify your PR2 account, send a PM to `Player Bot` saying `"
                     + verificationCode + "` and nothing else. Then use the command `/verify username` where 'username' is replaced with your PR2 username.");
-                await SendMessage(msg.Channel, msg.Author.Username + ", please check your DMs.");
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", please check your DMs.");
 
                 if (verifiedUsers.pendingVerification.ContainsKey(msg.Author.Id))
                     verifiedUsers.pendingVerification[msg.Author.Id] = verificationCode;
@@ -668,7 +676,7 @@ namespace Player_Bot
                 JToken theMessage = messages["messages"].FirstOrDefault((t) => ((string)t["name"]).ToLower() == args[1].ToLower());
                 if (theMessage == null)
                 {
-                    await SendMessage(msg.Channel, msg.Author.Username + ", I do not have a PM from you. Make sure you have sent the required PM to the PR2 user `"
+                    await SendMessage(msg.Channel, GetUsername(msg.Author) + ", I do not have a PM from you. Make sure you have sent the required PM to the PR2 user `"
                         + pr2_username + "`, and that the PM includes only the verification code.");
                 }
                 else if ((string)theMessage["message"] == verifiedUsers.pendingVerification[msg.Author.Id].ToString())
@@ -676,12 +684,12 @@ namespace Player_Bot
                     args[1] = (string)theMessage["name"]; // get PR2's official casing
                     await VerifyMember(msg.Author as SocketGuildUser, args[1], (msg.Channel as SocketGuildChannel).Guild);
 
-                    await SendMessage(msg.Channel, msg.Author.Username + ", you have been verified as PR2 user `" + args[1] + "`.");
+                    await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have been verified as PR2 user `" + args[1] + "`.");
 
                 }
                 else
                 {
-                    await SendMessage(msg.Channel, msg.Author.Username + ", I have a PM from you, but it's contents do not exactly match the verificatin code I gave you.");
+                    await SendMessage(msg.Channel, GetUsername(msg.Author) + ", I have a PM from you, but it's contents do not exactly match the verificatin code I gave you.");
                 }
             }
 
@@ -759,7 +767,7 @@ namespace Player_Bot
 
         private async Task<bool> GTFO(SocketMessage msg, params string[] args)
         {
-            await SendMessage(msg.Channel, "I'm sorry you feel that way, " + msg.Author.Username +
+            await SendMessage(msg.Channel, "I'm sorry you feel that way, " + GetUsername(msg.Author) +
               ". :(\nI guess I'll leave now. Bye guys!");
 #pragma warning disable CS4014
             Disconnect(); // Do not await because DCing in the middle of the DiscordSocketClient's MessageReceived event causes problems.
