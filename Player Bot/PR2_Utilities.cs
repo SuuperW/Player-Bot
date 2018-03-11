@@ -14,6 +14,7 @@ namespace Player_Bot
     {
         private static HttpClient httpClient = new HttpClient();
         const string getPMUrl = "https://pr2hub.com/messages_get.php?count=999";
+        const string serverStatusUrl = "http://pr2hub.com/files/server_status_2.txt";
 
         public static string[] groups = new string[] { "Guest", "Member", "Moderator", "Admin" };
 
@@ -58,6 +59,12 @@ namespace Player_Bot
             FormUrlEncodedContent content = new FormUrlEncodedContent(values);
             HttpResponseMessage response = await httpClient.PostAsync(getPMUrl, content);
 
+            return JObject.Parse(await response.Content.ReadAsStringAsync());
+        }
+
+        public async static Task<JObject> GetServers()
+        {
+            HttpResponseMessage response = await httpClient.GetAsync(serverStatusUrl);
             return JObject.Parse(await response.Content.ReadAsStringAsync());
         }
     }

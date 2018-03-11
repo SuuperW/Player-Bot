@@ -384,7 +384,8 @@ namespace Player_Bot
                 { "hint", new BotCommand(GetArtifactHint) },
                 { "role", new BotCommand(ToggleRole) },
                 { "verify", new BotCommand(VerifySelf) },
-                { "verified", new BotCommand(GetPR2Usernames, 1) }
+                { "verified", new BotCommand(GetPR2Usernames, 1) },
+                { "hh", new BotCommand(GetHHStatus) }
            };
 
             trustedBotCommands = new SortedList<string, BotCommand>
@@ -505,9 +506,31 @@ namespace Player_Bot
         private async Task<bool> GetArtifactHint(SocketMessage msg, params string[] args)
         {
             JObject hint = await PR2_Utilities.GetArtifactHint();
-            string message = "Fred remembers this much: " + hint["hint"] + "\nThe first person to find this artifact was " + hint["finder_name"];
+            string message = "Fred remembers this much: `" + hint["hint"] + "\nThe first person to find this artifact was " + hint["finder_name"];
 
             await SendMessage(msg.Channel, message);
+            return true;
+        }
+        private async Task<bool> GetHHStatus(SocketMessage msg, params string[] args)
+        {
+            JObject servers = await PR2_Utilities.GetServers();
+            IEnumerable<string> happyServers = servers["servers"].Where((t) => (int)t["happy_hour"] == 1)
+                .Select((t) => (string)t["server_name"]);
+
+            if (happyServers.Count() == 0)
+            {
+                await SendMessage(msg.Channel, "None of the servers are happy right now. So sad.");
+            }
+            else
+            {
+                StringBuilder listStr = new StringBuilder("```");
+                foreach (string serverName in happyServers)
+                    listStr.Append("\n" + serverName);
+                listStr.Append("```");
+
+                await SendMessage(msg.Channel, "The following servers are currently happy:" + listStr);
+            }
+
             return true;
         }
         #endregion
@@ -610,7 +633,7 @@ namespace Player_Bot
 
             }
             else
-            { 
+            {
                 await SendMessage(msg.Channel, GetUsername(msg.Author) + ", the role `" + role.Name + "` is not available.");
                 return false;
             }
