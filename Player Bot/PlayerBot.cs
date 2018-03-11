@@ -506,7 +506,8 @@ namespace Player_Bot
         private async Task<bool> GetArtifactHint(SocketMessage msg, params string[] args)
         {
             JObject hint = await PR2_Utilities.GetArtifactHint();
-            string message = "Fred remembers this much: `" + hint["hint"] + "\nThe first person to find this artifact was " + hint["finder_name"];
+            string message = "Fred remembers this much: `" + hint["hint"].ToString().Replace("`", "\\`")
+                + "\nThe first person to find this artifact was `" + hint["finder_name"].ToString().Replace("`", "\\`") + "`.";
 
             await SendMessage(msg.Channel, message);
             return true;
