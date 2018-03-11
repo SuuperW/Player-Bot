@@ -380,7 +380,8 @@ namespace Player_Bot
             trustedBotCommands = new SortedList<string, BotCommand>
             {
                 { "toggle_public_role", new BotCommand(TogglePublicRole) },
-                { "verify_member", new BotCommand(VerifyMember) }
+                { "verify_member", new BotCommand(VerifyMember) },
+                { "unverify_member", new BotCommand(UnverifyMember) }
             };
 
             ownerBotCommands = new SortedList<string, BotCommand>
@@ -577,7 +578,7 @@ namespace Player_Bot
         {
             if (args.Length < 3)
             {
-                await SendMessage(msg.Channel, msg.Author.Username + ", the format for this cmmand is `/view @discordUser pr2_username`.");
+                await SendMessage(msg.Channel, msg.Author.Username + ", the format for this cmmand is `/verify @discordUser pr2_username`.");
                 return false;
             }
             args[2] = CombineLastArgs(args, 2);
@@ -597,6 +598,26 @@ namespace Player_Bot
 
             verifiedUsers.VerifyMember(user.Id, args[2]);
             await SendMessage(msg.Channel, "Discord user " + user.Username + "#" + user.Discriminator + " verified as PR2 user " + args[2] + ".");
+            return true;
+        }
+        private async Task<bool> UnverifyMember(SocketMessage msg, params string[] args)
+        {
+            if (args.Length < 3)
+            {
+                await SendMessage(msg.Channel, msg.Author.Username + ", the format for this cmmand is `/verify @discordUser pr2_username`.");
+                return false;
+            }
+            args[2] = CombineLastArgs(args, 2);
+
+            SocketUser user = msg.MentionedUsers.FirstOrDefault();
+            if (user == null)
+            {
+                await SendMessage(msg.Channel, msg.Author.Username + ", you must mention the Discord member you are un-verifying.");
+                return false;
+            }
+
+            verifiedUsers.UnverifyMember(user.Id, args[2]);
+            await SendMessage(msg.Channel, "Discord user " + user.Username + "#" + user.Discriminator + " un-verified as PR2 user " + args[2] + ".");
             return true;
         }
         private async Task<bool> VerifySelf(SocketMessage msg, params string[] args)
