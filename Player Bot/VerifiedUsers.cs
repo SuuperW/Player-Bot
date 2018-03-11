@@ -55,6 +55,18 @@ namespace Player_Bot
                 members[discordID].RemoveWhere((n) => n.ToLower() == pr2Name.ToLower());
         }
 
+        public bool IsMemberVerifiedAs(ulong discordID, string pr2Name)
+        {
+            return members.ContainsKey(discordID) && members[discordID].Contains(pr2Name);
+        }
+        public List<string> GetPR2Usernames(ulong discordID)
+        {
+            if (members.ContainsKey(discordID))
+                return members[discordID].ToList();
+            else
+                return null;
+        }
+
         public void Save(string path)
         {
             JObject obj = new JObject();

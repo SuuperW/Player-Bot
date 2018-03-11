@@ -362,7 +362,7 @@ namespace Player_Bot
         private string GetUsername(SocketUser user)
         {
             SocketGuildUser guildUser = user as SocketGuildUser;
-            if (guildUser != null && guildUser.Nickname != "")
+            if (guildUser != null && guildUser.Nickname != null)
                 return guildUser.Nickname;
             else
                 return user.Username;
@@ -378,19 +378,20 @@ namespace Player_Bot
         {
             everybodyBotCommands = new SortedList<string, BotCommand>
             {
-                { "help", new BotCommand(SendHelpMessage) },
-                { "commands", new BotCommand(SendCommandsList) },
+                { "help", new BotCommand(SendHelpMessage, 1) },
+                { "commands", new BotCommand(SendCommandsList, 1) },
                 { "view", new BotCommand(ViewUserInfo) },
                 { "hint", new BotCommand(GetArtifactHint) },
                 { "role", new BotCommand(ToggleRole) },
-                { "verify", new BotCommand(VerifySelf) }
+                { "verify", new BotCommand(VerifySelf) },
+                { "verified", new BotCommand(GetPR2Usernames, 1) }
            };
 
             trustedBotCommands = new SortedList<string, BotCommand>
             {
-                { "toggle_public_role", new BotCommand(TogglePublicRole) },
-                { "verify_member", new BotCommand(VerifyMember) },
-                { "unverify_member", new BotCommand(UnverifyMember) }
+                { "toggle_public_role", new BotCommand(TogglePublicRole, -1) },
+                { "verify_member", new BotCommand(VerifyMember, -1) },
+                { "unverify_member", new BotCommand(UnverifyMember, -1) }
             };
 
             ownerBotCommands = new SortedList<string, BotCommand>
@@ -698,6 +699,9 @@ namespace Player_Bot
         }
         private async Task VerifyMember(SocketGuildUser user, string pr2Name, SocketGuild guild)
         {
+            if (verifiedUsers.IsMemberVerifiedAs(user.Id, pr2Name))
+                return;
+
             verifiedUsers.VerifyMember(user.Id, pr2Name);
             verifiedUsers.pendingVerification.Remove(user.Id);
             verifiedUsers.Save(verifiedPath);
@@ -731,6 +735,36 @@ namespace Player_Bot
                 if (theMesage != null)
                     await theMesage.DeleteAsync();
             }
+        }
+
+        private async Task<bool> GetPR2Usernames(SocketMessage msg, params string[] args)
+        {
+            ulong id = 0;
+            if (args.Length == 1) // self
+                id = msg.Author.Id;
+            else if (!ulong.TryParse(args[1], out id)) // other Discord user
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", to get the PR2 usernames for another Discord user, provide their Discord user ID.");
+
+            if (id != 0)
+            {
+                SocketUser user = socketClient.GetUser(id);
+                List<string> names = verifiedUsers.GetPR2Usernames(id);
+                if (names != null)
+                {
+                    StringBuilder nameListStr = new StringBuilder("```");
+                    for (int i = 0; i < names.Count; i++)
+                        nameListStr.Append("\n" + names[i]);
+                    nameListStr.Append("```");
+
+                    await SendMessage(msg.Channel, user.Username + "#" + user.Discriminator + " has verified the following PR2 accounts:" + nameListStr);
+                }
+                else if (user != null)
+                    await SendMessage(msg.Channel, user.Username + "#" + user.Discriminator + " has not verified any PR2 accounts.");
+                else
+                    await SendMessage(msg.Channel, "Discord user `" + id + "` has not verified any PR2 accounts.");
+            }
+
+            return true;
         }
         #endregion
 
