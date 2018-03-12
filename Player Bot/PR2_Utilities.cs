@@ -91,6 +91,7 @@ namespace Player_Bot
         }
 
         private static char[] validUsernameChars = new char[] { ' ', '!', '-', '.', ':', ';', '=', '?', '~' };
+        private static char[] previouslyValidUsernameChars = new char[] { '#', '*', '(', ')' };
         public static bool IsUsernameValid(string username)
         {
             if (username == null || username.Length < 1 || username.Length > 20)
@@ -100,7 +101,7 @@ namespace Player_Bot
 
             for (int i = 0; i < username.Length; i++)
             {
-                if (!char.IsLetterOrDigit(username[i]) && !validUsernameChars.Contains(username[i]))
+                if (!char.IsLetterOrDigit(username[i]) && !validUsernameChars.Contains(username[i]) && !previouslyValidUsernameChars.Contains(username[i]))
                     return false;
             }
 
