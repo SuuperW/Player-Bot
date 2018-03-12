@@ -140,5 +140,39 @@ namespace Player_Bot
             HttpResponseMessage response = await httpClient.GetAsync(serverStatusUrl);
             return JObject.Parse(await response.Content.ReadAsStringAsync());
         }
+
+        public static int ExpToRankUpFrom(int rank)
+        {
+            if (rank == 0)
+                return 1;
+
+            double exp = 30 * Math.Pow(1.25, rank);
+            if (exp > int.MaxValue)
+                return -1;
+            else
+                return (int)Math.Round(exp);
+        }
+        public static long ExpFromRankTo(int from, int to)
+        {
+            if (from >= to || to > 82 || from < 0) // cannot rank up past 82 due to int.MaxValue
+                return -1;
+
+            long totalExp = 0;
+            if (from == 0)
+            {
+                totalExp = 1;
+                from = 1;
+            }
+
+            double exp = 30 * Math.Pow(1.25, from - 1);
+            while (from < to)
+            {
+                exp *= 1.25;
+                totalExp += (long)Math.Round(exp);
+                from++;
+            }
+
+            return totalExp;
+        }
     }
 }

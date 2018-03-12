@@ -387,7 +387,8 @@ namespace Player_Bot
                 { "role", new BotCommand(ToggleRole) },
                 { "verify", new BotCommand(VerifySelf) },
                 { "verified", new BotCommand(GetPR2Usernames, 1) },
-                { "hh", new BotCommand(GetHHStatus) }
+                { "hh", new BotCommand(GetHHStatus) },
+                { "exp", new BotCommand(GetExpRequired) }
            };
 
             trustedBotCommands = new SortedList<string, BotCommand>
@@ -534,6 +535,49 @@ namespace Player_Bot
                 await SendMessage(msg.Channel, "The following servers are currently happy:" + listStr);
             }
 
+            return true;
+        }
+        private async Task<bool> GetExpRequired(SocketMessage msg, params string[] args)
+        {
+            int from = 0;
+            int to = 1;
+            if (args.Length > 1)
+            {
+                if (!int.TryParse(args[1], out from))
+                {
+                    await SendMessage(msg.Channel, GetUsername(msg.Author) + ", I could not parse '" + args[1] + "'.");
+                    return true;
+                }
+                if (args.Length > 2)
+                {
+                    if (!int.TryParse(args[2], out to))
+                    {
+                        await SendMessage(msg.Channel, GetUsername(msg.Author) + ", I could not parse '" + args[1] + "'.");
+                        return true;
+                    }
+                }
+                else
+                    to = from + 1;
+            }
+
+            if (to <= from)
+            {
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you cannot rank down, unfortunately.");
+                return true;
+            }
+            else if (to > 82)
+            {
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", PR2 will fail to properly handle exp values that large, so it is impossible to rank up past 82 by gaining exp.");
+                return true;
+            }
+            else if (from < 0)
+            {
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", how do you plan on reaching a negative rank to begin with?");
+                return true;
+            }
+
+            long exp = PR2_Utilities.ExpFromRankTo(from, to);
+            await SendMessage(msg.Channel, "Going from rank " + from + " to " + to + " requires " + exp + " exp.");
             return true;
         }
         #endregion
