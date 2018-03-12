@@ -810,7 +810,7 @@ namespace Player_Bot
                     
                 if (messages.ContainsKey("error") || (bool)messages["success"] == false)
                 {
-                    await SendMessage(msg.Channel, "Error: count not retreive PMs.");
+                    await SendMessage(msg.Channel, "Error: could not retreive PMs.");
                     return false;
                 }
 
