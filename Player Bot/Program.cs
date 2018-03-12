@@ -77,7 +77,11 @@ namespace Player_Bot
             while (!success)
             {
                 try { await bot.ConnectAndStart(); success = true; }
-                catch { Console.WriteLine("Connection error. Retrying in 5 seconds..."); await Task.Delay(5000); }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Connection error. (" + ex.Message + ") Retrying in 5 seconds...");
+                    await Task.Delay(5000);
+                }
             }
         }
 
