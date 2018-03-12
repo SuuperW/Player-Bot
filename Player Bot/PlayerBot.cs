@@ -784,10 +784,13 @@ namespace Player_Bot
                     + verificationCode + "` and nothing else. Then use the command `/verify username` where 'username' is replaced with your PR2 username.");
                 await SendMessage(msg.Channel, GetUsername(msg.Author) + ", please check your DMs.");
 
-                if (verifiedUsers.pendingVerification.ContainsKey(msg.Author.Id))
-                    verifiedUsers.pendingVerification[msg.Author.Id] = verificationCode;
-                else
-                    verifiedUsers.pendingVerification.Add(msg.Author.Id, verificationCode);
+                lock (verifiedUsers.pendingVerification)
+                {
+                    if (verifiedUsers.pendingVerification.ContainsKey(msg.Author.Id))
+                        verifiedUsers.pendingVerification[msg.Author.Id] = verificationCode;
+                    else
+                        verifiedUsers.pendingVerification.Add(msg.Author.Id, verificationCode);
+                }
                 verifiedUsers.Save(verifiedPath);
             }
             else // finish process
@@ -807,7 +810,7 @@ namespace Player_Bot
                     SaveSecrets();
                     messages = await PR2_Utilities.GetPrivateMessages(pr2_token);
                 }
-                    
+
                 if (messages.ContainsKey("error") || (bool)messages["success"] == false)
                 {
                     await SendMessage(msg.Channel, "Error: could not retreive PMs.");
@@ -820,17 +823,26 @@ namespace Player_Bot
                     await SendMessage(msg.Channel, GetUsername(msg.Author) + ", I do not have a PM from you. Make sure you have sent the required PM to the PR2 user `"
                         + pr2_username + "`, and that the PM includes only the verification code.");
                 }
-                else if ((string)theMessage["message"] == verifiedUsers.pendingVerification[msg.Author.Id].ToString())
-                {
-                    args[1] = (string)theMessage["name"]; // get PR2's official casing
-                    await VerifyMember(msg.Author as SocketGuildUser, args[1], (msg.Channel as SocketGuildChannel).Guild);
-
-                    await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have been verified as PR2 user `" + args[1] + "`.");
-
-                }
                 else
                 {
-                    await SendMessage(msg.Channel, GetUsername(msg.Author) + ", I have a PM from you, but it's contents do not exactly match the verificatin code I gave you.");
+                    bool verify;
+                    lock (verifiedUsers.pendingVerification)
+                    {
+                        verify = (string)theMessage["message"] == verifiedUsers.pendingVerification[msg.Author.Id].ToString();
+                        if (verify)
+                            verifiedUsers.pendingVerification.Remove(msg.Author.Id);
+                    }
+
+                    if (verify)
+                    {
+                        args[1] = (string)theMessage["name"]; // get PR2's official casing
+                        await VerifyMember(msg.Author as SocketGuildUser, args[1], (msg.Channel as SocketGuildChannel).Guild);
+
+                        await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have been verified as PR2 user `" + args[1] + "`.");
+
+                    }
+                    else
+                        await SendMessage(msg.Channel, GetUsername(msg.Author) + ", I have a PM from you, but it's contents do not exactly match the verificatin code I gave you.");
                 }
             }
 
@@ -842,7 +854,6 @@ namespace Player_Bot
                 return;
 
             verifiedUsers.VerifyMember(user.Id, pr2Name);
-            verifiedUsers.pendingVerification.Remove(user.Id);
             verifiedUsers.Save(verifiedPath);
 
             // server role
