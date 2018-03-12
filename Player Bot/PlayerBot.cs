@@ -60,6 +60,11 @@ namespace Player_Bot
                 throw new FileNotFoundException("PlayerBot count not find helpTopics.txt. Please don't run a bot without a working help command.");
 
             secrets = JObject.Parse(File.ReadAllText(secretsPath));
+            bot_token = secrets["bot_token"].ToString();
+            pr2_username = (string)secrets["pr2_username"];
+            pr2_password = (string)secrets["pr2_password"];
+            if (secrets.ContainsKey("pr2_token"))
+                pr2_token = (string)secrets["pr2_token"];
 
             specialUsers = new SpecialUsersCollection("files/specialUsers.txt");
             roles = new RolesCollection(rolesPath);
