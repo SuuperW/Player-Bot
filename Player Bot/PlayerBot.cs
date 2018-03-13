@@ -850,21 +850,20 @@ namespace Player_Bot
         }
         private async Task VerifyMember(SocketGuildUser user, string pr2Name, SocketGuild guild)
         {
-            if (verifiedUsers.IsMemberVerifiedAs(user.Id, pr2Name))
-                return;
-
-            verifiedUsers.VerifyMember(user.Id, pr2Name);
-            verifiedUsers.Save(verifiedPath);
+            if (!verifiedUsers.IsMemberVerifiedAs(user.Id, pr2Name))
+            {
+                verifiedUsers.VerifyMember(user.Id, pr2Name);
+                verifiedUsers.Save(verifiedPath);
+                // logging
+                IMessageChannel channel = guild.Channels.FirstOrDefault((c) => c.Name == "verified-members" && c is IMessageChannel) as IMessageChannel;
+                if (channel != null)
+                    await SendMessage(channel, user.Mention + " - " + pr2Name);
+            }
 
             // server role
             SocketRole role = guild.Roles.FirstOrDefault((r) => r.Name == "Verified Member");
-            if (role != null)
+            if (role != null && !user.Roles.Any((r) => r.Id == role.Id))
                 await user.AddRoleAsync(role);
-
-            // logging
-            IMessageChannel channel = guild.Channels.FirstOrDefault((c) => c.Name == "verified-members" && c is IMessageChannel) as IMessageChannel;
-            if (channel != null)
-                await SendMessage(channel, user.Mention + " - " + pr2Name);
         }
         private async Task UnverifyMember(SocketGuildUser user, string pr2Name, SocketGuild guild)
         {
