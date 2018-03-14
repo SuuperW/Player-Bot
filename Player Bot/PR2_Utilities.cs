@@ -156,7 +156,9 @@ namespace Player_Bot
             FormUrlEncodedContent content = new FormUrlEncodedContent(values);
             HttpResponseMessage response = await httpClient.PostAsync("http://pr2hub.com/get_player_info_2.php", content);
 
-            return JObject.Parse(await response.Content.ReadAsStringAsync());
+            string str = await response.Content.ReadAsStringAsync();
+            str = str.Replace("&lt;", "<").Replace("&gt;", ">");
+            return JObject.Parse(str);
         }
 
         public async static Task<JObject> GetArtifactHint()
