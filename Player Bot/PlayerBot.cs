@@ -401,7 +401,8 @@ namespace Player_Bot
                 { "unverify_member", new BotCommand(UnverifyMember, -1) },
                 { "toggle_hh_reporting", new BotCommand(ToggleHHReporting, -1) },
                 { "set_hh_role", new BotCommand(SetHHRole, -1) },
-                { "set_verified_role", new BotCommand(SetVerifiedRole, -1) }
+                { "set_verified_role", new BotCommand(SetVerifiedRole, -1) },
+                { "todo", new BotCommand(GetConfigTodo, 10) }
             };
 
             ownerBotCommands = new SortedList<string, BotCommand>
@@ -475,7 +476,7 @@ namespace Player_Bot
         }
         #endregion
 
-        #region "simple info gets"
+        #region "info gets"
         private async Task<bool> ViewUserInfo(SocketMessage msg, params string[] args)
         {
             if (args.Length < 2)
@@ -583,6 +584,36 @@ namespace Player_Bot
 
             long exp = PR2_Utilities.ExpFromRankTo(from, to);
             await SendMessage(msg.Channel, "Going from rank " + from + " to " + to + " requires " + exp + " exp.");
+            return true;
+        }
+
+        private async Task<bool> GetConfigTodo(SocketMessage msg, params string[] args)
+        {
+            if (!(msg.Channel is SocketGuildChannel))
+            {
+                await SendMessage(msg.Channel, "There's nothing to set up outside of servers.");
+                return false;
+            }
+
+            SocketGuild guild = (msg.Channel as SocketGuildChannel).Guild;
+            StringBuilder message = new StringBuilder();
+            if (!guild.Channels.Any((c) => config.hhChannels.Contains(c.Id)))
+                message.Append("\nThe server does not have a channel set up for HH reporting. To set a channel, use `/toggle_hh_reporting`.");
+
+            GuildConfigInfo guildConfig = config.guilds.ContainsKey(guild.Id) ? config.guilds[guild.Id] : new GuildConfigInfo();
+            if (guildConfig.verifiedRole == 0)
+                message.Append("\nThe server does not have a 'verified member' role. To set one, use `/set_verified_role`.");
+            if (guildConfig.hhRole == 0)
+                message.Append("\nThe server does not have a 'hh' role. To set one, use `/set_hh_role`.");
+
+            string str;
+            if (message.Length == 0)
+                str = "There is nothing left to do to set up the server.";
+            else
+                str = "You may want to fix the following things:" + message.ToString();
+
+            await SendMessage(msg.Channel, GetUsername(msg.Author) + ", I will send you a DM.");
+            await SendMessage(await msg.Author.GetOrCreateDMChannelAsync(), str);
             return true;
         }
         #endregion
