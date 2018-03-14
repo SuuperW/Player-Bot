@@ -636,6 +636,8 @@ namespace Player_Bot
                 message.Append("\nThe server does not have a 'verified member' role. To set one, use `/set_verified_role`.");
             if (guildConfig.hhRole == 0)
                 message.Append("\nThe server does not have a 'hh' role. To set one, use `/set_hh_role`.");
+            if (guildConfig.trustedRole == 0)
+                message.Append("\nThe server does not have a 'trusted' role. To set one, use `/set_trusted_role`.");
 
             string str;
             if (message.Length == 0)
