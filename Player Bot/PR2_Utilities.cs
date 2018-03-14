@@ -132,7 +132,7 @@ namespace Player_Bot
         }
 
         private static char[] validUsernameChars = new char[] { ' ', '!', '-', '.', ':', ';', '=', '?', '~' };
-        private static char[] previouslyValidUsernameChars = new char[] { '#', '*', '(', ')' };
+        private static char[] previouslyValidUsernameChars = new char[] { '#', '*', '(', ')', '<', '>' };
         public static bool IsUsernameValid(string username)
         {
             if (username == null || username.Length < 1 || username.Length > 20)
