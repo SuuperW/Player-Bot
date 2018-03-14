@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
 using System.IO;
@@ -84,6 +85,46 @@ namespace Player_Bot
             return (string)jResponse["token"];
         }
 
+        public delegate void HHList(List<JToken> list);
+        public static event HHList HHStarted;
+        public static bool watchingHH { get; private set; }
+        public static void BeginWatchingHH()
+        {
+            watchingHH = true;
+            Thread t = new Thread(WatchHH);
+            t.Start();
+        }
+        public static void StopWatchingHH()
+        {
+            watchingHH = false;
+        }
+        private static async void WatchHH()
+        {
+            HashSet<int> happyServers = new HashSet<int>();
+            while (watchingHH)
+            {
+                JObject servers = await GetServers();
+                IEnumerable<JToken> currentHappyServers = servers["servers"].Where((t) => (int)t["happy_hour"] == 1);
+
+                List<JToken> newHappyServers = new List<JToken>();
+                foreach (JToken server in currentHappyServers)
+                {
+                    if (!happyServers.Contains((int)server["server_id"]))
+                        newHappyServers.Add(server);
+                }
+                bool hhChanged = newHappyServers.Count > 0 || happyServers.Count != currentHappyServers.Count();
+                happyServers = currentHappyServers.Select((s) => (int)s["server_id"]).ToHashSet();
+
+                if (newHappyServers.Count > 0)
+                    HHStarted.Invoke(newHappyServers);
+
+                // Wait one minute before checking again. Admins can start HHs whenever they want.
+                Thread.Sleep(1000 * 60);
+            }
+
+        }
+
+        #region "get info"
         public static bool IsResponseNotLoggedInError(JObject jObject)
         {
             return jObject.ContainsKey("error") &&
@@ -174,5 +215,6 @@ namespace Player_Bot
 
             return totalExp;
         }
+        #endregion
     }
 }

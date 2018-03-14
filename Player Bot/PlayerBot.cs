@@ -52,7 +52,6 @@ namespace Player_Bot
 
         public PlayerBot(int loggingLevel = -1)
         {
-
             if (!File.Exists(secretsPath))
                 throw new FileNotFoundException("PlayerBot could not find secrets.txt. Please see README for info on how to set this up.");
             if (!File.Exists(helpPath))
@@ -66,6 +65,7 @@ namespace Player_Bot
                 pr2_token = (string)secrets["pr2_token"];
 
             config = new BotConfig(configPath);
+            PR2_Utilities.HHStarted += ReportNewHH;
 
             specialUsers = new SpecialUsersCollection("files/specialUsers.txt");
             roles = new RolesCollection(rolesPath);
@@ -131,6 +131,8 @@ namespace Player_Bot
                 bot_name_discrim = socketClient.CurrentUser.Username + "#" + socketClient.CurrentUser.Discriminator;
                 Connected?.Invoke();
                 AppendToLog("<ready time='" + DateTime.Now.ToShortDateString() + " " + DateTime.Now.ToLongTimeString() + "'></ready>\n", 2);
+                if (config.hhChannels.Count != 0)
+                    PR2_Utilities.BeginWatchingHH();
                 return null;
             };
             client.Disconnected += (e) => { Disconnected?.Invoke(); return null; };
@@ -962,6 +964,8 @@ namespace Player_Bot
             {
                 config.hhChannels.Add(channelID);
                 await SendMessage(msg.Channel, "This channel will now receive HH reports.");
+                if (!PR2_Utilities.watchingHH)
+                    PR2_Utilities.BeginWatchingHH();
             }
             else
             {
@@ -971,6 +975,28 @@ namespace Player_Bot
 
             config.Save(configPath);
             return true;
+        }
+        private async void ReportNewHH(List<JToken> list)
+        {
+            if (!IsConnected)
+                return;
+
+            StringBuilder genericMessage = new StringBuilder(list.Count + " server");
+            genericMessage.Append(list.Count == 1 ? " has" : "s have").Append(" become happy!");
+            genericMessage.Append("```");
+            for (int i = 0; i < list.Count; i++)
+                genericMessage.Append("\n" + list[i]["server_name"]);
+            genericMessage.Append("```");
+            string baseMessage = genericMessage.ToString();
+
+            foreach (ulong channelID in config.hhChannels)
+                {
+                    IMessageChannel channel = socketClient.GetChannel(channelID) as IMessageChannel;
+                    SocketGuild guild = (channel as SocketGuildChannel)?.Guild;
+
+                    string rolePrefix = guild == null ? "" : "<@&" + config.guilds[guild.Id].hhRole + "> ";
+                    await SendMessage(channel, rolePrefix + baseMessage);
+                }
         }
         #endregion
 
