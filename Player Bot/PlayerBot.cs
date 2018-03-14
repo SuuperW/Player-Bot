@@ -415,7 +415,8 @@ namespace Player_Bot
                 { "toggle_hh_reporting", new BotCommand(ToggleHHReporting, -1) },
                 { "set_hh_role", new BotCommand(SetHHRole, -1) },
                 { "set_verified_role", new BotCommand(SetVerifiedRole, -1) },
-                { "todo", new BotCommand(GetConfigTodo, 10) }
+                { "todo", new BotCommand(GetConfigTodo, 10) },
+                { "clean_config", new BotCommand(CleanConfig, 10) }
             };
 
             guildOwnerBotCommands = new SortedList<string, BotCommand>
@@ -1076,7 +1077,7 @@ namespace Player_Bot
         }
         #endregion
 
-        #region "monitoring"
+        #region "misc"
         private async Task<bool> ToggleHHReporting(SocketMessage msg, params string[] args)
         {
             ulong channelID = msg.Channel.Id;
@@ -1118,6 +1119,41 @@ namespace Player_Bot
                 string rolePrefix = guild == null ? "" : "<@&" + config.guilds[guild.Id].hhRole + "> ";
                 await SendMessage(channel, rolePrefix + baseMessage);
             }
+        }
+
+        private async Task<bool> CleanConfig(SocketMessage msg, params string[] args)
+        {
+            if (socketClient.GetChannel(config.loggingChannel) == null)
+                config.loggingChannel = 0;
+            foreach (ulong id in config.hhChannels)
+            {
+                if (socketClient.GetChannel(id) == null)
+                    config.hhChannels.Remove(id);
+            }
+
+            for (int i = 0; i < config.guilds.Count; i++)
+            {
+                SocketGuild guild = socketClient.GetGuild(config.guilds.Keys[i]);
+                if (guild == null)
+                {
+                    config.guilds.RemoveAt(i);
+                    i--;
+                    continue;
+                }
+
+                GuildConfigInfo guildConfig = config.guilds.Values[i];
+                if (!guild.Roles.Any((r) => r.Id == guildConfig.hhRole))
+                    guildConfig.hhRole = 0;
+                if (!guild.Roles.Any((r) => r.Id == guildConfig.trustedRole))
+                    guildConfig.trustedRole = 0;
+                if (!guild.Roles.Any((r) => r.Id == guildConfig.verifiedRole))
+                    guildConfig.verifiedRole = 0;
+            }
+            config.Save(configPath);
+
+            await SendMessage(msg.Channel, GetUsername(msg.Author) + ", all invalid roles and channels in my config file have been removed.");
+
+            return true;
         }
         #endregion
 
