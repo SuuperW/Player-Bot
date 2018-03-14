@@ -610,7 +610,7 @@ namespace Player_Bot
             if (message.Length == 0)
                 str = "There is nothing left to do to set up the server.";
             else
-                str = "You may want to fix the following things:" + message.ToString();
+                str = "You may want to fix the following things (all suggested commands should be done in the server, not here):" + message.ToString();
 
             await SendMessage(msg.Channel, GetUsername(msg.Author) + ", I will send you a DM.");
             await SendMessage(await msg.Author.GetOrCreateDMChannelAsync(), str);
@@ -884,7 +884,8 @@ namespace Player_Bot
                 Random r = new Random(Environment.TickCount);
                 int verificationCode = r.Next(100000000, int.MaxValue);
                 await SendMessage(await msg.Author.GetOrCreateDMChannelAsync(), "To verify your PR2 account, send a PM to `Player Bot` saying `"
-                    + verificationCode + "` and nothing else. Then use the command `/verify username` where 'username' is replaced with your PR2 username.");
+                    + verificationCode + "` and nothing else. Then use the command `/verify username` where 'username' is replaced with your PR2 username."
+                    + "\nThis verification code is only good for one use. Any previous codes I gave you are now invalid.");
                 await SendMessage(msg.Channel, GetUsername(msg.Author) + ", please check your DMs.");
 
                 lock (verifiedUsers.pendingVerification)
