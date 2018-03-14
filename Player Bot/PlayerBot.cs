@@ -674,7 +674,7 @@ namespace Player_Bot
             SocketRole role = guild.Roles.FirstOrDefault((r) => r.Name.ToLower() == args[1].ToLower());
             if (role == null)
             {
-                await SendMessage(msg.Channel, "The role `" + args[1] + "` does not exist.");
+                await SendMessage(msg.Channel, "The role `" + args[1] + "` does not exist. (If the role you are trying to use contains spaces, surround the name with quotation marks. E.g., `\"Role Name\"`");
             }
 
             return role;
