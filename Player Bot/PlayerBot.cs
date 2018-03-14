@@ -19,7 +19,6 @@ namespace Player_Bot
         const string helpPath = "helpTopics.txt";
         const string outputPath = "files/output.xml";
         const string errorPath = "files/error.txt";
-        const string rolesPath = "files/roles.txt";
         const string verifiedPath = "files/verifiedUsers.txt";
         const string configPath = "files/config.txt";
 
@@ -46,7 +45,6 @@ namespace Player_Bot
         public bool IsConnected { get => socketClient != null && socketClient.ConnectionState >= ConnectionState.Connected; }
 
         SpecialUsersCollection specialUsers;
-        RolesCollection roles;
         VerifiedUsers verifiedUsers;
         CommandHistory commandHistory = new CommandHistory();
 
@@ -68,7 +66,6 @@ namespace Player_Bot
             PR2_Utilities.HHStarted += ReportNewHH;
 
             specialUsers = new SpecialUsersCollection("files/specialUsers.txt");
-            roles = new RolesCollection(rolesPath);
             verifiedUsers = new VerifiedUsers(verifiedPath);
 
             helpStrings = new SortedDictionary<string, string>();
@@ -661,7 +658,7 @@ namespace Player_Bot
             SocketGuildUser user = msg.Author as SocketGuildUser;
             SocketGuild guild = (msg.Channel as SocketGuildChannel).Guild;
             StringBuilder message = new StringBuilder("The following roles are available to everybody in this server: ");
-            foreach (ulong roleID in roles.publicRoles)
+            foreach (ulong roleID in config.guilds[guild.Id].publicRoles)
             {
                 SocketRole role = guild.Roles.FirstOrDefault((r) => r.Id == roleID);
                 if (role != null)
@@ -673,7 +670,7 @@ namespace Player_Bot
                 message.Length -= 2;
 
             message.Append("\nThe following roles are available to guild members: ");
-            foreach (ulong roleID in roles.pr2GuildRoles)
+            foreach (ulong roleID in config.guilds[guild.Id].pr2GuildRoles)
             {
                 SocketRole role = guild.Roles.FirstOrDefault((r) => r.Id == roleID);
                 if (role != null)
@@ -719,17 +716,18 @@ namespace Player_Bot
             if (roleToAdd == null)
                 return false;
 
-            if (roles.publicRoles.Contains(roleToAdd.Id))
+            SocketGuild guild = (msg.Channel as SocketGuildChannel).Guild;
+            if (config.guilds[guild.Id].publicRoles.Contains(roleToAdd.Id))
             {
-                roles.publicRoles.Remove(roleToAdd.Id);
+                config.guilds[guild.Id].publicRoles.Remove(roleToAdd.Id);
                 await SendMessage(msg.Channel, "The role `" + roleToAdd.Name + "` is no longer public.");
             }
             else
             {
-                roles.publicRoles.Add(roleToAdd.Id);
+                config.guilds[guild.Id].publicRoles.Add(roleToAdd.Id);
                 await SendMessage(msg.Channel, "The role `" + roleToAdd.Name + "` has been made public.");
             }
-            roles.Save(rolesPath);
+            config.Save(configPath);
 
             return true;
         }
@@ -740,9 +738,10 @@ namespace Player_Bot
                 return true;
 
             SocketGuildUser user = msg.Author as SocketGuildUser; // should be safe; GetRoleFromArgs verifies that this is a guild
+            SocketGuild guild = (msg.Channel as SocketGuildChannel).Guild;
             if (user.Roles.Contains(role))
             {
-                if (roles.publicRoles.Contains(role.Id) || roles.pr2GuildRoles.Contains(role.Id))
+                if (config.guilds[guild.Id].publicRoles.Contains(role.Id) || config.guilds[guild.Id].pr2GuildRoles.Contains(role.Id))
                 {
                     await user.RemoveRoleAsync(role);
                     await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have been removed from the `" + role.Name + "` role.");
@@ -750,12 +749,12 @@ namespace Player_Bot
                 else
                     await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you may not remove the `" + role.Name + "` role.");
             }
-            else if (roles.publicRoles.Contains(role.Id)) // add public role
+            else if (config.guilds[guild.Id].publicRoles.Contains(role.Id)) // add public role
             {
                 await user.AddRoleAsync(role);
                 await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you have been given the `" + role.Name + "` role.");
             }
-            else if (roles.pr2GuildRoles.Contains(role.Id)) // add guild role?
+            else if (config.guilds[guild.Id].pr2GuildRoles.Contains(role.Id)) // add guild role?
             {
                 List<string> accounts = verifiedUsers.GetPR2Usernames(user.Id);
                 string pr2Name;
@@ -806,17 +805,18 @@ namespace Player_Bot
             if (roleToAdd == null)
                 return false;
 
-            if (roles.pr2GuildRoles.Contains(roleToAdd.Id))
+            SocketGuild guild = (msg.Channel as SocketGuildChannel).Guild;
+            if (config.guilds[guild.Id].pr2GuildRoles.Contains(roleToAdd.Id))
             {
-                roles.pr2GuildRoles.Remove(roleToAdd.Id);
+                config.guilds[guild.Id].pr2GuildRoles.Remove(roleToAdd.Id);
                 await SendMessage(msg.Channel, "The role `" + roleToAdd.Name + "` is no longer a guild role.");
             }
             else
             {
-                roles.pr2GuildRoles.Add(roleToAdd.Id);
+                config.guilds[guild.Id].pr2GuildRoles.Add(roleToAdd.Id);
                 await SendMessage(msg.Channel, "The role `" + roleToAdd.Name + "` has been made a guild role.");
             }
-            roles.Save(rolesPath);
+            config.Save(configPath);
 
             return true;
         }
