@@ -400,7 +400,8 @@ namespace Player_Bot
                 { "verify_member", new BotCommand(VerifyMember, -1) },
                 { "unverify_member", new BotCommand(UnverifyMember, -1) },
                 { "toggle_hh_reporting", new BotCommand(ToggleHHReporting, -1) },
-                { "set_hh_role", new BotCommand(SetHHRole, -1) }
+                { "set_hh_role", new BotCommand(SetHHRole, -1) },
+                { "set_verified_role", new BotCommand(SetVerifiedRole, -1) }
             };
 
             ownerBotCommands = new SortedList<string, BotCommand>
@@ -749,6 +750,39 @@ namespace Player_Bot
             config.Save(configPath);
 
             await SendMessage(msg.Channel, "The HH role for this server has been set.");
+            return true;
+        }
+        private async Task<bool> SetVerifiedRole(SocketMessage msg, params string[] args)
+        {
+            if (!(msg.Channel is SocketGuildChannel))
+            {
+                await SendMessage(msg.Channel, "This command only works in server channels.");
+                return false;
+            }
+
+            SocketGuild guild = (msg.Channel as SocketGuildChannel).Guild;
+            ulong guildID = guild.Id;
+            if (args.Length < 2)
+            {
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", to set the verified member role, give the role's name.");
+                return false;
+            }
+
+            args[1] = CombineLastArgs(args, 1);
+            SocketRole role = guild.Roles.FirstOrDefault((r) => r.Name == args[1]);
+            if (role == null)
+            {
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", no `" + args[1] + "` role exists in this server.");
+                return false;
+            }
+
+            if (!config.guilds.ContainsKey(guildID))
+                config.guilds.Add(guildID, new GuildConfigInfo());
+            GuildConfigInfo guildConfig = config.guilds[guildID];
+            guildConfig.verifiedRole = role.Id;
+            config.Save(configPath);
+
+            await SendMessage(msg.Channel, "The verified member role for this server has been set.");
             return true;
         }
         #endregion
