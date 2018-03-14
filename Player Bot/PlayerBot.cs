@@ -21,8 +21,10 @@ namespace Player_Bot
         const string errorPath = "files/error.txt";
         const string rolesPath = "files/roles.txt";
         const string verifiedPath = "files/verifiedUsers.txt";
+        const string configPath = "files/config.txt";
 
         JObject secrets;
+        JObject config;
         string bot_token;
         string bot_name_discrim;
 
@@ -50,9 +52,8 @@ namespace Player_Bot
         VerifiedUsers verifiedUsers;
         CommandHistory commandHistory = new CommandHistory();
 
-        public PlayerBot(int loggingLevel = 2)
+        public PlayerBot(int loggingLevel = -1)
         {
-            this.loggingLevel = loggingLevel;
 
             if (!File.Exists(secretsPath))
                 throw new FileNotFoundException("PlayerBot could not find secrets.txt. Please see README for info on how to set this up.");
@@ -65,6 +66,19 @@ namespace Player_Bot
             pr2_password = (string)secrets["pr2_password"];
             if (secrets.ContainsKey("pr2_token"))
                 pr2_token = (string)secrets["pr2_token"];
+
+            if (File.Exists(configPath))
+                config = JObject.Parse(File.ReadAllText(configPath));
+            else
+            {
+                config = new JObject();
+                config["logging_level"] = 2;
+            }
+
+            if (loggingLevel != -1)
+                this.loggingLevel = loggingLevel;
+            else
+                this.loggingLevel = (int)config["logging_level"];
 
             specialUsers = new SpecialUsersCollection("files/specialUsers.txt");
             roles = new RolesCollection(rolesPath);
@@ -128,6 +142,8 @@ namespace Player_Bot
             DiscordSocketClient client = new DiscordSocketClient();
             client.Ready += () =>
             {
+                if (config.ContainsKey("logging_channel"))
+                    loggingChannel = socketClient.GetChannel((ulong)config["logging_channel"]) as IMessageChannel;
                 bot_name_discrim = socketClient.CurrentUser.Username + "#" + socketClient.CurrentUser.Discriminator;
                 Connected?.Invoke();
                 AppendToLog("<ready time='" + DateTime.Now.ToShortDateString() + " " + DateTime.Now.ToLongTimeString() + "'></ready>\n", 2);
@@ -212,6 +228,16 @@ namespace Player_Bot
         {
             secrets["pr2_token"] = pr2_token;
             File.WriteAllText(secretsPath, secrets.ToString());
+        }
+        private void SaveConfig()
+        {
+            config["logging_level"] = loggingLevel;
+            if (loggingChannel != null)
+                config["logging_channel"] = loggingChannel.Id;
+            else
+                config.Remove("logging_channel");
+
+            File.WriteAllText(configPath, config.ToString());
         }
 
         private async Task SocketClient_MessageReceived(SocketMessage msg)
@@ -1013,12 +1039,16 @@ namespace Player_Bot
                 loggingChannel = msg.Channel;
                 await SendMessage(msg.Channel, "Now sending all log messages to this channel.");
             }
+            SaveConfig();
             return true;
         }
         private async Task<bool> SetLoggingLevel(SocketMessage msg, params string[] args)
         {
             if (int.TryParse(args[1], out loggingLevel))
+            {
                 await SendMessage(msg.Channel, "Logging level set.");
+                SaveConfig();
+            }
             else
                 await SendMessage(msg.Channel, "Could not parse `" + args[1] + "`.");
             return true;
