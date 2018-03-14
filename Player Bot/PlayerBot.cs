@@ -390,7 +390,8 @@ namespace Player_Bot
                 { "verify", new BotCommand(VerifySelf) },
                 { "verified", new BotCommand(GetPR2Usernames, 1) },
                 { "hh", new BotCommand(GetHHStatus) },
-                { "exp", new BotCommand(GetExpRequired) }
+                { "exp", new BotCommand(GetExpRequired) },
+                { "roles", new BotCommand(GetAvailableRoles) }
            };
 
             trustedBotCommands = new SortedList<string, BotCommand>
@@ -614,6 +615,43 @@ namespace Player_Bot
 
             await SendMessage(msg.Channel, GetUsername(msg.Author) + ", I will send you a DM.");
             await SendMessage(await msg.Author.GetOrCreateDMChannelAsync(), str);
+            return true;
+        }
+        private async Task<bool> GetAvailableRoles(SocketMessage msg, params string[] args)
+        {
+            if (!(msg.Channel is SocketGuildChannel))
+            {
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you are not in a guild; roles don't exist here.");
+                return false;
+            }
+
+            SocketGuildUser user = msg.Author as SocketGuildUser;
+            SocketGuild guild = (msg.Channel as SocketGuildChannel).Guild;
+            StringBuilder message = new StringBuilder("The following roles are available to everybody in this server: ");
+            foreach (ulong roleID in roles.publicRoles)
+            {
+                SocketRole role = guild.Roles.FirstOrDefault((r) => r.Id == roleID);
+                if (role != null)
+                    message.Append(role.Name + ", ");
+            }
+            if (message[message.Length - 2] == ':')
+                message.Append("no roles available");
+            else
+                message.Length -= 2;
+
+            message.Append("\nThe following roles are available to guild members: ");
+            foreach (ulong roleID in roles.pr2GuildRoles)
+            {
+                SocketRole role = guild.Roles.FirstOrDefault((r) => r.Id == roleID);
+                if (role != null)
+                    message.Append(role.Name + ", ");
+            }
+            if (message[message.Length - 2] == ':')
+                message.Append("no roles available");
+            else
+                message.Length -= 2;
+
+            await SendMessage(msg.Channel, message.ToString());
             return true;
         }
         #endregion
