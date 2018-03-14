@@ -14,7 +14,6 @@ namespace Player_Bot
         private string path;
 
         public ulong Owner { get => json["owner"].Value<ulong>(); }
-        private JArray TrustedUsers { get => json["trusted"] as JArray; }
         private JArray BannedUsers { get => json["banned"] as JArray; }
 
         public SpecialUsersCollection(string path)
@@ -26,46 +25,17 @@ namespace Player_Bot
 
             if (json["owner"] == null)
                 json["owner"] = 0ul;
-            if (json["trusted"] == null)
-                json["trusted"] = new JArray();
             if (json["banned"] == null)
                 json["banned"] = new JArray();
 
             this.path = path;
         }
 
-        public bool IsUserTrusted(ulong userID)
-        {
-            return userID == Owner || TrustedUsers.FirstOrDefault(
-                (t) => t.ToString() == userID.ToString()) != null;
-        }
         public bool IsUserBanned(ulong userID)
         {
             return userID != Owner && BannedUsers.FirstOrDefault(
                 (t) => t.ToString() == userID.ToString()) != null;
         }
-
-        public bool AddTrustedUser(ulong userID)
-        {
-            if (!IsUserTrusted(userID))
-            {
-                TrustedUsers.Add(userID);
-                Save();
-                return true;
-            }
-            return false;
-        }
-        public bool RemoveTrustedUser(ulong userID)
-        {
-            if (IsUserTrusted(userID))
-            {
-                TrustedUsers.FirstOrDefault((t) => t.ToString() == userID.ToString()).Remove();
-                Save();
-                return true;
-            }
-            return false;
-        }
-
         public bool BanUser(ulong userID)
         {
             if (!IsUserBanned(userID))

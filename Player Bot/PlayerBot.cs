@@ -296,11 +296,22 @@ namespace Player_Bot
 
                 if (everybodyBotCommands.ContainsKey(commandStr))
                     command = everybodyBotCommands[commandStr];
-                else if (specialUsers.IsUserTrusted(msg.Author.Id) && trustedBotCommands.ContainsKey(commandStr))
-                    command = trustedBotCommands[commandStr];
                 else if (specialUsers.Owner == msg.Author.Id && ownerBotCommands.ContainsKey(commandStr))
                     command = ownerBotCommands[commandStr];
                 else
+                {
+                    SocketGuildUser user = msg.Author as SocketGuildUser;
+                    GuildConfigInfo guildConfig = user == null ? null : config.guilds[user.Guild.Id];
+                    if (user != null && guildConfig != null)
+                    {
+                        if (trustedBotCommands.ContainsKey(commandStr) && (user.Guild.OwnerId == user.Id || user.Roles.Any((r) => r.Id == guildConfig.trustedRole)))
+                            command = trustedBotCommands[commandStr];
+                        else if (guildOwnerBotCommands.ContainsKey(commandStr) && user.Guild.OwnerId == user.Id)
+                            command = guildOwnerBotCommands[commandStr];
+                    }
+                }
+
+                if (command == null)
                 {
                     command = everybodyBotCommands["help"];
                     args = new string[] { "help", "_invalid_command" };
@@ -375,6 +386,7 @@ namespace Player_Bot
         #region "Bot Commands"
         private SortedList<string, BotCommand> everybodyBotCommands;
         private SortedList<string, BotCommand> trustedBotCommands;
+        private SortedList<string, BotCommand> guildOwnerBotCommands;
         private SortedList<string, BotCommand> ownerBotCommands;
         private BotCommand bannedCommand;
 
@@ -406,10 +418,13 @@ namespace Player_Bot
                 { "todo", new BotCommand(GetConfigTodo, 10) }
             };
 
+            guildOwnerBotCommands = new SortedList<string, BotCommand>
+            {
+                { "set_trusted_role", new BotCommand(null, -1) }
+            };
+
             ownerBotCommands = new SortedList<string, BotCommand>
             {
-                { "add_trusted_user", new BotCommand(AddTrustedUser) },
-                { "remove_trusted_user", new BotCommand(RemoveTrustedUser) },
                 { "gtfo", new BotCommand(GTFO) },
                 { "ban_user", new BotCommand(BanUser) },
                 { "unban_user", new BotCommand(UnbanUser) },
@@ -459,12 +474,25 @@ namespace Player_Bot
             StringBuilder availableCommands = new StringBuilder();
             foreach (KeyValuePair<string, BotCommand> kvp in everybodyBotCommands)
                 availableCommands.Append("\n" + kvp.Key); // \n first because first line tells Discord how to format
-            if (specialUsers.IsUserTrusted(msg.Author.Id))
+
+            SocketGuildUser user = msg.Author as SocketGuildUser;
+            GuildConfigInfo guildConfig = user == null ? null : config.guilds[user.Guild.Id];
+            if (user != null && guildConfig != null)
             {
-                availableCommands.Append("\n\n----- Trusted User Commands -----");
-                foreach (KeyValuePair<string, BotCommand> kvp in trustedBotCommands)
-                    availableCommands.Append("\n" + kvp.Key);
+                if (user.Guild.OwnerId == user.Id || user.Roles.Any((r) => r.Id == guildConfig.trustedRole))
+                {
+                    availableCommands.Append("\n\n----- Trusted User Commands -----");
+                    foreach (KeyValuePair<string, BotCommand> kvp in trustedBotCommands)
+                        availableCommands.Append("\n" + kvp.Key);
+                }
+                if (user.Guild.OwnerId == user.Id)
+                {
+                    availableCommands.Append("\n\n----- Server Owner Commands -----");
+                    foreach (KeyValuePair<string, BotCommand> kvp in guildOwnerBotCommands)
+                        availableCommands.Append("\n" + kvp.Key);
+                }
             }
+
             if (specialUsers.Owner == msg.Author.Id)
             {
                 availableCommands.Append("\n\n----- Owner Commands -----");
@@ -472,6 +500,8 @@ namespace Player_Bot
                     availableCommands.Append("\n" + kvp.Key);
             }
 
+            if (user != null) // in a server
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", I will send you a DM.");
             await SendMessage(await msg.Author.GetOrCreateDMChannelAsync(), "Here are the commands you can use: ```" + availableCommands + "```");
             return true;
         }
@@ -822,6 +852,23 @@ namespace Player_Bot
             await SendMessage(msg.Channel, "The verified member role for this server has been set.");
             return true;
         }
+        private async Task<bool> SetTrustedRole(SocketMessage msg, params string[] args)
+        {
+            args[1] = CombineLastArgs(args, 1);
+            SocketRole role = await GetRoleFromArgs(msg, args);
+            if (role == null)
+                return true;
+
+            ulong guildID = (msg.Channel as SocketGuildChannel).Guild.Id;
+            if (!config.guilds.ContainsKey(guildID))
+                config.guilds.Add(guildID, new GuildConfigInfo());
+            GuildConfigInfo guildConfig = config.guilds[guildID];
+            guildConfig.trustedRole = role.Id;
+            config.Save(configPath);
+
+            await SendMessage(msg.Channel, "The trusted role for this server has been set.");
+            return true;
+        }
         #endregion
 
         #region "verification"
@@ -1062,48 +1109,17 @@ namespace Player_Bot
             string baseMessage = genericMessage.ToString();
 
             foreach (ulong channelID in config.hhChannels)
-                {
-                    IMessageChannel channel = socketClient.GetChannel(channelID) as IMessageChannel;
-                    SocketGuild guild = (channel as SocketGuildChannel)?.Guild;
+            {
+                IMessageChannel channel = socketClient.GetChannel(channelID) as IMessageChannel;
+                SocketGuild guild = (channel as SocketGuildChannel)?.Guild;
 
-                    string rolePrefix = guild == null ? "" : "<@&" + config.guilds[guild.Id].hhRole + "> ";
-                    await SendMessage(channel, rolePrefix + baseMessage);
-                }
+                string rolePrefix = guild == null ? "" : "<@&" + config.guilds[guild.Id].hhRole + "> ";
+                await SendMessage(channel, rolePrefix + baseMessage);
+            }
         }
         #endregion
 
         #region "owner"
-        private async Task<bool> AddTrustedUser(SocketMessage msg, params string[] args)
-        {
-            int count = 0;
-            foreach (ITag tag in msg.Tags)
-            {
-                if (tag.Type == TagType.UserMention && tag.Key != BotID)
-                {
-                    if (specialUsers.AddTrustedUser(tag.Key))
-                        count++;
-                }
-            }
-
-            await SendMessage(msg.Channel, "Added " + count + " user(s) to trusted user list.");
-            return count != 0;
-        }
-        private async Task<bool> RemoveTrustedUser(SocketMessage msg, params string[] args)
-        {
-            int count = 0;
-            foreach (ITag tag in msg.Tags)
-            {
-                if (tag.Type == TagType.UserMention && tag.Key != BotID)
-                {
-                    if (specialUsers.RemoveTrustedUser(tag.Key))
-                        count++;
-                }
-            }
-
-            await SendMessage(msg.Channel, "Removed " + count + " user(s) from trusted user list.");
-            return count != 0;
-        }
-
         private async Task<bool> GTFO(SocketMessage msg, params string[] args)
         {
             await SendMessage(msg.Channel, "I'm sorry you feel that way, " + GetUsername(msg.Author) +
