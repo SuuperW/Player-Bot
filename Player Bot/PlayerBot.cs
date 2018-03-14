@@ -633,7 +633,7 @@ namespace Player_Bot
             }
 
             SocketGuild guild = (msg.Channel as SocketGuildChannel).Guild;
-            SocketRole role = guild.Roles.FirstOrDefault((r) => r.Name == args[1]);
+            SocketRole role = guild.Roles.FirstOrDefault((r) => r.Name.ToLower() == args[1].ToLower());
             if (role == null)
             {
                 await SendMessage(msg.Channel, "The role `" + args[1] + "` does not exist.");
