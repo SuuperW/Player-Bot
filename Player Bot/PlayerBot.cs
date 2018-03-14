@@ -16,7 +16,7 @@ namespace Player_Bot
     class PlayerBot
     {
         const string secretsPath = "files/secrets.txt";
-        const string helpPath = "files/helpTopics.txt";
+        const string helpPath = "helpTopics.txt";
         const string outputPath = "files/output.xml";
         const string errorPath = "files/error.txt";
         const string rolesPath = "files/roles.txt";
