@@ -24,7 +24,6 @@ namespace Player_Bot
         const string configPath = "files/config.txt";
 
         JObject secrets;
-        JObject config;
         string bot_token;
         string bot_name_discrim;
 
@@ -32,8 +31,7 @@ namespace Player_Bot
         string pr2_password;
         string pr2_token;
 
-        int loggingLevel;
-        IMessageChannel loggingChannel = null;
+        BotConfig config;
 
         int tempFileID = -1;
         private string GetTempFileName()
@@ -45,7 +43,7 @@ namespace Player_Bot
         DiscordSocketClient socketClient;
 
         ulong BotID { get => socketClient.CurrentUser.Id; }
-        public bool IsConnected { get => socketClient.ConnectionState >= ConnectionState.Connected; }
+        public bool IsConnected { get => socketClient != null && socketClient.ConnectionState >= ConnectionState.Connected; }
 
         SpecialUsersCollection specialUsers;
         RolesCollection roles;
@@ -67,18 +65,7 @@ namespace Player_Bot
             if (secrets.ContainsKey("pr2_token"))
                 pr2_token = (string)secrets["pr2_token"];
 
-            if (File.Exists(configPath))
-                config = JObject.Parse(File.ReadAllText(configPath));
-            else
-            {
-                config = new JObject();
-                config["logging_level"] = 2;
-            }
-
-            if (loggingLevel != -1)
-                this.loggingLevel = loggingLevel;
-            else
-                this.loggingLevel = (int)config["logging_level"];
+            config = new BotConfig(configPath);
 
             specialUsers = new SpecialUsersCollection("files/specialUsers.txt");
             roles = new RolesCollection(rolesPath);
@@ -119,7 +106,6 @@ namespace Player_Bot
 #pragma warning disable CS4014
             AppendToLog("<disconnect time='" + DateTime.Now.ToShortDateString() + " " + DateTime.Now.ToLongTimeString() + "'></disconnect>\n", 2);
 #pragma warning restore CS4014
-            loggingChannel = null;
 
             await socketClient.GetUser(specialUsers.Owner).SendMessageAsync("I'm diconnecting now.");
 
@@ -142,8 +128,6 @@ namespace Player_Bot
             DiscordSocketClient client = new DiscordSocketClient();
             client.Ready += () =>
             {
-                if (config.ContainsKey("logging_channel"))
-                    loggingChannel = socketClient.GetChannel((ulong)config["logging_channel"]) as IMessageChannel;
                 bot_name_discrim = socketClient.CurrentUser.Username + "#" + socketClient.CurrentUser.Discriminator;
                 Connected?.Invoke();
                 AppendToLog("<ready time='" + DateTime.Now.ToShortDateString() + " " + DateTime.Now.ToLongTimeString() + "'></ready>\n", 2);
@@ -195,10 +179,10 @@ namespace Player_Bot
         }
         Task AppendToLog(string text, int priority = 1)
         {
-            if (priority >= loggingLevel)
+            if (priority >= config.loggingLevel)
             {
-                if (loggingChannel != null)
-                    loggingChannel.SendMessageAsync(text);
+                if (config.loggingChannel != 0 && IsConnected)
+                    (socketClient.GetChannel(config.loggingChannel) as IMessageChannel).SendMessageAsync(text);
                 return File.AppendAllTextAsync(outputPath, text);
             }
             else
@@ -228,16 +212,6 @@ namespace Player_Bot
         {
             secrets["pr2_token"] = pr2_token;
             File.WriteAllText(secretsPath, secrets.ToString());
-        }
-        private void SaveConfig()
-        {
-            config["logging_level"] = loggingLevel;
-            if (loggingChannel != null)
-                config["logging_channel"] = loggingChannel.Id;
-            else
-                config.Remove("logging_channel");
-
-            File.WriteAllText(configPath, config.ToString());
         }
 
         private async Task SocketClient_MessageReceived(SocketMessage msg)
@@ -422,7 +396,9 @@ namespace Player_Bot
                 { "toggle_public_role", new BotCommand(TogglePublicRole, -1) },
                 { "toggle_guild_role", new BotCommand(ToggleGuildRole, -1) },
                 { "verify_member", new BotCommand(VerifyMember, -1) },
-                { "unverify_member", new BotCommand(UnverifyMember, -1) }
+                { "unverify_member", new BotCommand(UnverifyMember, -1) },
+                { "toggle_hh_reporting", new BotCommand(ToggleHHReporting, -1) },
+                { "set_hh_role", new BotCommand(SetHHRole, -1) }
             };
 
             ownerBotCommands = new SortedList<string, BotCommand>
@@ -739,6 +715,40 @@ namespace Player_Bot
 
             return true;
         }
+
+        private async Task<bool> SetHHRole(SocketMessage msg, params string[] args)
+        {
+            if (!(msg.Channel is SocketGuildChannel))
+            {
+                await SendMessage(msg.Channel, "This command only works in server channels.");
+                return false;
+            }
+
+            SocketGuild guild = (msg.Channel as SocketGuildChannel).Guild;
+            ulong guildID = guild.Id;
+            if (args.Length < 2)
+            {
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", to set the HH role, give the role's name.");
+                return false;
+            }
+
+            args[1] = CombineLastArgs(args, 1);
+            SocketRole role = guild.Roles.FirstOrDefault((r) => r.Name == args[1]);
+            if (role == null)
+            {
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", no `" + args[1] + "` role exists in this server.");
+                return false;
+            }
+
+            if (!config.guilds.ContainsKey(guildID))
+                config.guilds.Add(guildID, new GuildConfigInfo());
+            GuildConfigInfo guildConfig = config.guilds[guildID];
+            guildConfig.hhRole = role.Id;
+            config.Save(configPath);
+
+            await SendMessage(msg.Channel, "The HH role for this server has been set.");
+            return true;
+        }
         #endregion
 
         #region "verification"
@@ -943,6 +953,27 @@ namespace Player_Bot
         }
         #endregion
 
+        #region "monitoring"
+        private async Task<bool> ToggleHHReporting(SocketMessage msg, params string[] args)
+        {
+            ulong channelID = msg.Channel.Id;
+
+            if (!config.hhChannels.Contains(channelID))
+            {
+                config.hhChannels.Add(channelID);
+                await SendMessage(msg.Channel, "This channel will now receive HH reports.");
+            }
+            else
+            {
+                config.hhChannels.Remove(channelID);
+                await SendMessage(msg.Channel, "This channel will no longer receive HH reports.");
+            }
+
+            config.Save(configPath);
+            return true;
+        }
+        #endregion
+
         #region "owner"
         private async Task<bool> AddTrustedUser(SocketMessage msg, params string[] args)
         {
@@ -1029,25 +1060,25 @@ namespace Player_Bot
 
         private async Task<bool> LogToChannel(SocketMessage msg, params string[] args)
         {
-            if (loggingChannel != null && loggingChannel.Id == msg.Channel.Id)
+            if (config.loggingChannel == msg.Channel.Id)
             {
-                loggingChannel = null;
+                config.loggingChannel = 0;
                 await SendMessage(msg.Channel, "Log messages will no longer be sent to this channel.");
             }
             else
             {
-                loggingChannel = msg.Channel;
+                config.loggingChannel = msg.Channel.Id;
                 await SendMessage(msg.Channel, "Now sending all log messages to this channel.");
             }
-            SaveConfig();
+            config.Save(configPath);
             return true;
         }
         private async Task<bool> SetLoggingLevel(SocketMessage msg, params string[] args)
         {
-            if (int.TryParse(args[1], out loggingLevel))
+            if (int.TryParse(args[1], out config.loggingLevel))
             {
                 await SendMessage(msg.Channel, "Logging level set.");
-                SaveConfig();
+                config.Save(configPath);
             }
             else
                 await SendMessage(msg.Channel, "Could not parse `" + args[1] + "`.");
