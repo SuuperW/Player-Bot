@@ -418,7 +418,7 @@ namespace Player_Bot
 
             guildOwnerBotCommands = new SortedList<string, BotCommand>
             {
-                { "set_trusted_role", new BotCommand(null, -1) }
+                { "set_trusted_role", new BotCommand(SetTrustedRole, -1) }
             };
 
             ownerBotCommands = new SortedList<string, BotCommand>
