@@ -90,9 +90,12 @@ namespace Player_Bot
         public static bool watchingHH { get; private set; }
         public static void BeginWatchingHH()
         {
-            watchingHH = true;
-            Thread t = new Thread(WatchHH);
-            t.Start();
+            if (!watchingHH)
+            {
+                watchingHH = true;
+                Thread t = new Thread(WatchHH);
+                t.Start();
+            }
         }
         public static void StopWatchingHH()
         {
