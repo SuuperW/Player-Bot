@@ -1105,10 +1105,13 @@ namespace Player_Bot
 
             StringBuilder genericMessage = new StringBuilder(list.Count + " server");
             genericMessage.Append(list.Count == 1 ? " has" : "s have").Append(" become happy!");
-            genericMessage.Append("```");
+            genericMessage.Append("```\n");
             for (int i = 0; i < list.Count; i++)
-                genericMessage.Append("\n" + list[i]["server_name"]);
-            genericMessage.Append("```");
+            {
+                if ((int)list[i]["guild_id"] == 0)
+                    genericMessage.Append(list[i]["server_name"] + ", ");
+            }
+            genericMessage.Length -= 2;
             string baseMessage = genericMessage.ToString();
 
             foreach (ulong channelID in config.hhChannels)
@@ -1117,7 +1120,7 @@ namespace Player_Bot
                 SocketGuild guild = (channel as SocketGuildChannel)?.Guild;
 
                 string rolePrefix = guild == null ? "" : "<@&" + config.guilds[guild.Id].hhRole + "> ";
-                await SendMessage(channel, rolePrefix + baseMessage);
+                await SendMessage(channel, rolePrefix + baseMessage + "```");
             }
         }
 
