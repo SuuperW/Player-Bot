@@ -47,7 +47,7 @@ namespace Player_Bot
             JObject obj = new JObject();
             obj["verified_role"] = verifiedRole;
             obj["hh_role"] = hhRole;
-            obj["trusted_rold"] = trustedRole;
+            obj["trusted_role"] = trustedRole;
 
             obj["public_roles"] = JArray.FromObject(publicRoles);
             obj["pr2_guilds"] = JArray.FromObject(pr2GuildRoles);
