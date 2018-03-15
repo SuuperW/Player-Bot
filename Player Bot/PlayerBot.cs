@@ -1103,24 +1103,32 @@ namespace Player_Bot
             if (!IsConnected)
                 return;
 
-            StringBuilder genericMessage = new StringBuilder(list.Count + " server");
-            genericMessage.Append(list.Count == 1 ? " has" : "s have").Append(" become happy!");
-            genericMessage.Append("```\n");
+            StringBuilder serverList = new StringBuilder("```\n");
+            int reportedCount = 0;
             for (int i = 0; i < list.Count; i++)
             {
                 if ((int)list[i]["guild_id"] == 0)
-                    genericMessage.Append(list[i]["server_name"] + ", ");
+                {
+                    serverList.Append(list[i]["server_name"] + ", ");
+                    reportedCount++;
+                }
             }
-            genericMessage.Length -= 2;
-            string baseMessage = genericMessage.ToString();
+            serverList.Length -= 2;
+            serverList.Append("```");
 
-            foreach (ulong channelID in config.hhChannels)
+            if (reportedCount > 0)
             {
-                IMessageChannel channel = socketClient.GetChannel(channelID) as IMessageChannel;
-                SocketGuild guild = (channel as SocketGuildChannel)?.Guild;
+                string countPrefix = reportedCount + " server" + (reportedCount == 1 ? " has" : "s have") + " become happy!";
+                string baseMessage = countPrefix + serverList.ToString();
 
-                string rolePrefix = guild == null ? "" : "<@&" + config.guilds[guild.Id].hhRole + "> ";
-                await SendMessage(channel, rolePrefix + baseMessage + "```");
+                foreach (ulong channelID in config.hhChannels)
+                {
+                    IMessageChannel channel = socketClient.GetChannel(channelID) as IMessageChannel;
+                    SocketGuild guild = (channel as SocketGuildChannel)?.Guild;
+
+                    string rolePrefix = guild == null ? "" : "<@&" + config.guilds[guild.Id].hhRole + "> ";
+                    await SendMessage(channel, rolePrefix + baseMessage);
+                }
             }
         }
 
