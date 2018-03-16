@@ -298,12 +298,14 @@ namespace Player_Bot
                 else
                 {
                     SocketGuildUser user = msg.Author as SocketGuildUser;
-                    GuildConfigInfo guildConfig = user == null ? null : config.guilds[user.Guild.Id];
-                    if (user != null && guildConfig != null)
+                    GuildConfigInfo guildConfig = (user == null || !config.guilds.ContainsKey(user.Guild.Id)) ? null : config.guilds[user.Guild.Id];
+                    if (user != null)
                     {
-                        if (trustedBotCommands.ContainsKey(commandStr) && (user.Guild.OwnerId == user.Id || user.Roles.Any((r) => r.Id == guildConfig.trustedRole)))
+                        bool owner = user.Guild.OwnerId == user.Id;
+                        bool trusted = owner || (guildConfig != null && user.Roles.Any((r) => r.Id == guildConfig.trustedRole));
+                        if (trustedBotCommands.ContainsKey(commandStr) && trusted)
                             command = trustedBotCommands[commandStr];
-                        else if (guildOwnerBotCommands.ContainsKey(commandStr) && user.Guild.OwnerId == user.Id)
+                        else if (guildOwnerBotCommands.ContainsKey(commandStr) && owner)
                             command = guildOwnerBotCommands[commandStr];
                     }
                 }
@@ -474,16 +476,18 @@ namespace Player_Bot
                 availableCommands.Append("\n" + kvp.Key); // \n first because first line tells Discord how to format
 
             SocketGuildUser user = msg.Author as SocketGuildUser;
-            GuildConfigInfo guildConfig = user == null ? null : config.guilds[user.Guild.Id];
-            if (user != null && guildConfig != null)
+            GuildConfigInfo guildConfig = (user == null || !config.guilds.ContainsKey(user.Guild.Id)) ? null : config.guilds[user.Guild.Id];
+            if (user != null)
             {
-                if (user.Guild.OwnerId == user.Id || user.Roles.Any((r) => r.Id == guildConfig.trustedRole))
+                bool owner = user.Guild.OwnerId == user.Id;
+                bool trusted = owner || (guildConfig != null && user.Roles.Any((r) => r.Id == guildConfig.trustedRole));
+                if (trusted)
                 {
                     availableCommands.Append("\n\n----- Trusted User Commands -----");
                     foreach (KeyValuePair<string, BotCommand> kvp in trustedBotCommands)
                         availableCommands.Append("\n" + kvp.Key);
                 }
-                if (user.Guild.OwnerId == user.Id)
+                if (owner)
                 {
                     availableCommands.Append("\n\n----- Server Owner Commands -----");
                     foreach (KeyValuePair<string, BotCommand> kvp in guildOwnerBotCommands)
@@ -1129,11 +1133,17 @@ namespace Player_Bot
                 {
                     IMessageChannel channel = socketClient.GetChannel(channelID) as IMessageChannel;
                     SocketGuild guild = (channel as SocketGuildChannel)?.Guild;
+                    bool isConfigedGuild = guild != null && config.guilds.ContainsKey(guild.Id);
 
-                    string rolePrefix = guild != null && config.guilds.ContainsKey(guild.Id) && config.guilds[guild.Id].hhRole != 0
+                    string rolePrefix = isConfigedGuild && config.guilds[guild.Id].hhRole != 0
                         ? "<@&" + config.guilds[guild.Id].hhRole + "> " : "";
-                    if (guildServerNames.Contains(channel.Name.Replace("-", " ")))
-                        await SendMessage(channel, rolePrefix + "Your guild server has become happy!");
+                    if (isConfigedGuild && guild.Roles.Any((r) => r.Name.ToLower().Replace(' ', '-') == channel.Name // there is a role who's name matches this channel's name
+                      && guildServerNames.Contains(r.Name.ToLower().Replace(' ', '-')) // and who's name matches a happy guild server
+                      && config.guilds[guild.Id].pr2GuildRoles.Contains(r.Id))) // and is a guild role
+                    {
+                        if (guildServerNames.Contains(channel.Name.Replace("-", " ")))
+                            await SendMessage(channel, rolePrefix + "Your guild server has become happy!");
+                    }
                     else
                         await SendMessage(channel, rolePrefix + baseMessage);
                 }
