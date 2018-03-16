@@ -1138,7 +1138,7 @@ namespace Player_Bot
                     string rolePrefix = isConfigedGuild && config.guilds[guild.Id].hhRole != 0
                         ? "<@&" + config.guilds[guild.Id].hhRole + "> " : "";
                     if (isConfigedGuild && guild.Roles.Any((r) => r.Name.ToLower().Replace(' ', '-') == channel.Name // there is a role who's name matches this channel's name
-                      && guildServerNames.Contains(r.Name.ToLower().Replace(' ', '-')) // and who's name matches a happy guild server
+                      && guildServerNames.Contains(r.Name.ToLower()) // and who's name matches a happy guild server
                       && config.guilds[guild.Id].pr2GuildRoles.Contains(r.Id))) // and is a guild role
                     {
                         if (guildServerNames.Contains(channel.Name.Replace("-", " ")))
