@@ -545,7 +545,7 @@ namespace Player_Bot
         {
             JObject hint = await PR2_Utilities.GetArtifactHint();
             string message = "Fred remembers this much: `" + hint["hint"].ToString().Replace("`", "\\`")
-                + (hint["finder_name"].ToString() == "" ? "Nobody has found the artifact yet."
+                + (hint["finder_name"].ToString() == "" ? "`\nNobody has found the artifact yet."
                 : "`\nThe first person to find this artifact was `" + hint["finder_name"].ToString().Replace("`", "\\`") + "`.");
 
             await SendMessage(msg.Channel, message);
