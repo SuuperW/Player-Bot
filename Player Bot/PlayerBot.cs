@@ -1106,7 +1106,7 @@ namespace Player_Bot
 
             StringBuilder serverList = new StringBuilder("```\n");
             int reportedCount = 0;
-            SortedSet<string> serverNames = new SortedSet<string>();
+            SortedSet<string> guildServerNames = new SortedSet<string>();
             for (int i = 0; i < list.Count; i++)
             {
                 if ((int)list[i]["guild_id"] == 0)
@@ -1114,7 +1114,8 @@ namespace Player_Bot
                     serverList.Append(list[i]["server_name"] + ", ");
                     reportedCount++;
                 }
-                serverNames.Add(((string)list[i]["server_name"]).ToLower());
+                else
+                    guildServerNames.Add(((string)list[i]["server_name"]).ToLower());
             }
             serverList.Length -= 2;
             serverList.Append("```");
@@ -1131,7 +1132,7 @@ namespace Player_Bot
 
                     string rolePrefix = guild != null && config.guilds.ContainsKey(guild.Id) && config.guilds[guild.Id].hhRole != 0
                         ? "<@&" + config.guilds[guild.Id].hhRole + "> " : "";
-                    if (serverNames.Contains(channel.Name.Replace("-", " ")))
+                    if (guildServerNames.Contains(channel.Name.Replace("-", " ")))
                         await SendMessage(channel, rolePrefix + "Your guild server has become happy!");
                     else
                         await SendMessage(channel, rolePrefix + baseMessage);
