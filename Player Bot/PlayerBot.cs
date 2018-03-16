@@ -545,7 +545,8 @@ namespace Player_Bot
         {
             JObject hint = await PR2_Utilities.GetArtifactHint();
             string message = "Fred remembers this much: `" + hint["hint"].ToString().Replace("`", "\\`")
-                + "`\nThe first person to find this artifact was `" + hint["finder_name"].ToString().Replace("`", "\\`") + "`.";
+                + (hint["finder_name"].ToString() == "" ? "Nobody has found the artifact yet."
+                : "`\nThe first person to find this artifact was `" + hint["finder_name"].ToString().Replace("`", "\\`") + "`.");
 
             await SendMessage(msg.Channel, message);
             return true;
@@ -1105,6 +1106,7 @@ namespace Player_Bot
 
             StringBuilder serverList = new StringBuilder("```\n");
             int reportedCount = 0;
+            SortedSet<string> serverNames = new SortedSet<string>();
             for (int i = 0; i < list.Count; i++)
             {
                 if ((int)list[i]["guild_id"] == 0)
@@ -1112,6 +1114,7 @@ namespace Player_Bot
                     serverList.Append(list[i]["server_name"] + ", ");
                     reportedCount++;
                 }
+                serverNames.Add(((string)list[i]["server_name"]).ToLower());
             }
             serverList.Length -= 2;
             serverList.Append("```");
@@ -1126,8 +1129,12 @@ namespace Player_Bot
                     IMessageChannel channel = socketClient.GetChannel(channelID) as IMessageChannel;
                     SocketGuild guild = (channel as SocketGuildChannel)?.Guild;
 
-                    string rolePrefix = guild == null ? "" : "<@&" + config.guilds[guild.Id].hhRole + "> ";
-                    await SendMessage(channel, rolePrefix + baseMessage);
+                    string rolePrefix = guild != null && config.guilds.ContainsKey(guild.Id) && config.guilds[guild.Id].hhRole != 0
+                        ? "<@&" + config.guilds[guild.Id].hhRole + "> " : "";
+                    if (serverNames.Contains(channel.Name.Replace("-", " ")))
+                        await SendMessage(channel, rolePrefix + "Your guild server has become happy!");
+                    else
+                        await SendMessage(channel, rolePrefix + baseMessage);
                 }
             }
         }
