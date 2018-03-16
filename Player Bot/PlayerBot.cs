@@ -432,7 +432,8 @@ namespace Player_Bot
                 { "get_error", new BotCommand(GetError) },
                 { "log_here", new BotCommand(LogToChannel) },
                 { "set_logging_level", new BotCommand(SetLoggingLevel) },
-                { "clear_log", new BotCommand(ClearLog) }
+                { "clear_log", new BotCommand(ClearLog) },
+                { "version", new BotCommand(GetVersion) }
             };
 
             bannedCommand = new BotCommand(SendBannedMessage);
@@ -1270,6 +1271,12 @@ namespace Player_Bot
             File.Delete(outputPath);
             await AppendToLog("<log_cleared time='" + DateTime.Now.ToShortDateString() + " " + DateTime.Now.ToLongTimeString() + "'></log_cleared>\n");
             await SendMessage(msg.Channel, "Log file cleared.");
+            return true;
+        }
+
+        private async Task<bool> GetVersion(SocketMessage msg, params string[] args)
+        {
+            await SendMessage(msg.Channel, "1.0.01");
             return true;
         }
         #endregion
