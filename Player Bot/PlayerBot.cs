@@ -402,7 +402,8 @@ namespace Player_Bot
                 { "verified", new BotCommand(GetPR2Usernames, 1) },
                 { "hh", new BotCommand(GetHHStatus) },
                 { "exp", new BotCommand(GetExpRequired) },
-                { "roles", new BotCommand(GetAvailableRoles) }
+                { "roles", new BotCommand(GetAvailableRoles) },
+                { "nick", new BotCommand(Nick) }
            };
 
             trustedBotCommands = new SortedList<string, BotCommand>
@@ -1182,6 +1183,41 @@ namespace Player_Bot
             config.Save(configPath);
 
             await SendMessage(msg.Channel, GetUsername(msg.Author) + ", all invalid roles and channels in my config file have been removed.");
+
+            return true;
+        }
+
+        private async Task<bool> Nick(SocketMessage msg, params string[] args)
+        {
+            SocketGuildUser user = msg.Author as SocketGuildUser;
+            if (user == null)
+            {
+                await SendMessage(msg.Channel, "This command only works inside servers.");
+                return true;
+            }
+
+            if (!user.GuildPermissions.ChangeNickname)
+            {
+                await SendMessage(msg.Channel, GetUsername(msg.Author) + ", you do not have permission to change your nickname.");
+                return true;
+            }
+            if (!user.Guild.GetUser(socketClient.CurrentUser.Id).GuildPermissions.ManageNicknames)
+            {
+                await SendMessage(msg.Channel, "I'm sorry, but I do not have permission to change your nick for you.");
+                return true;
+            }
+
+            string oldNick = GetUsername(user);
+            string newNick = "";
+            if (args.Length > 1)
+                newNick = CombineLastArgs(args, 1);
+            await user.ModifyAsync((u) => u.Nickname = newNick);
+
+            string namePrefix = GetUsername(user) == oldNick ? oldNick : oldNick + ", err, I mean, " + GetUsername(user);
+            if (user.Nickname == null)
+                await SendMessage(msg.Channel, namePrefix + ", your nickname on this server has been reset.");
+            else
+                await SendMessage(msg.Channel, namePrefix + ", your nickname on this server has been set.");
 
             return true;
         }
